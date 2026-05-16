@@ -6,17 +6,24 @@ import fs from "fs";
 import path from "path";
 import { SiteImage, MenuItem } from "@/types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+// On Vercel the cwd filesystem is read-only; use /tmp so writes don't crash.
+const DATA_DIR = process.env.VERCEL
+  ? "/tmp/gratitude-data"
+  : path.join(process.cwd(), "data");
 
 function ensureDir() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  } catch {
+    // read-only filesystem — reads will return fallback defaults
+  }
 }
 
 function read<T>(file: string, fallback: T): T {
-  ensureDir();
-  const filepath = path.join(DATA_DIR, file);
-  if (!fs.existsSync(filepath)) return fallback;
   try {
+    ensureDir();
+    const filepath = path.join(DATA_DIR, file);
+    if (!fs.existsSync(filepath)) return fallback;
     return JSON.parse(fs.readFileSync(filepath, "utf-8")) as T;
   } catch {
     return fallback;
