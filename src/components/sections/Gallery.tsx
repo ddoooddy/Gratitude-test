@@ -68,7 +68,7 @@ export default function Gallery({ images, title, subtitle }: Props) {
 
         {/* Quote */}
         <RevealOnScroll className="text-center mt-20 max-w-2xl mx-auto" delay={200}>
-          <span className="text-[#e8c98a] text-5xl leading-none font-serif">"</span>
+          <span className="text-[#e8c98a] text-5xl leading-none font-serif">&ldquo;</span>
           <p
             className="text-[#5c3e33] text-xl md:text-2xl leading-relaxed -mt-4"
             style={{ fontFamily: "var(--font-playfair)", fontStyle: "italic" }}

@@ -31,8 +31,10 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });

@@ -4,7 +4,7 @@
  */
 import fs from "fs";
 import path from "path";
-import { SiteImage, SiteContent, MenuItem } from "@/types";
+import { SiteImage, MenuItem } from "@/types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 

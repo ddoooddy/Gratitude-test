@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function AdminLogin() {
@@ -49,13 +50,13 @@ export default function AdminLogin() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-10">
-          <a
+          <Link
             href="/"
             className="text-4xl text-[#2a1814] mb-2 block"
             style={{ fontFamily: "var(--font-cormorant)", fontWeight: 300 }}
           >
             Gratitude
-          </a>
+          </Link>
           <p className="text-xs tracking-[0.3em] uppercase text-[#c4a07e]">
             Panel de Administración
           </p>
@@ -121,9 +122,9 @@ export default function AdminLogin() {
         </div>
 
         <p className="text-center text-xs text-[#5c3e33]/40 mt-6">
-          <a href="/" className="hover:text-[#5c3e33]/70 transition-colors">
+          <Link href="/" className="hover:text-[#5c3e33]/70 transition-colors">
             ← Volver al sitio
-          </a>
+          </Link>
         </p>
       </div>
     </div>
