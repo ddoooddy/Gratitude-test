@@ -867,6 +867,15 @@
     @media (max-width: 640px) {
       .pdf-grid { grid-template-columns: 1fr; }
     }
+  
+    /* ── MOBILE: skip all reveal/stagger animations ── */
+    @media (max-width: 768px) {
+      .reveal, .stagger-item {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+      }
+    }
   </style>
 </head>
 <body>
