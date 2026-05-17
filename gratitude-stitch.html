@@ -497,11 +497,11 @@
       gap: 10px;
     }
     .gallery-item { overflow: hidden; cursor: pointer; }
-    .gallery-item img { transition: transform .7s ease; }
+    .gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .7s ease; }
     .gallery-item:hover img { transform: scale(1.06); }
     .gallery-item.tall { grid-row: span 2; }
-    .gallery-item .img-box { width: 100%; height: 100%; min-height: 220px; }
-    .gallery-item.tall .img-box { min-height: 460px; }
+    .gallery-item .img-box { width: 100%; height: 220px; }
+    .gallery-item.tall .img-box { height: 460px; }
 
     .gallery-quote {
       text-align: center;
@@ -721,7 +721,7 @@
       .pdf-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
       .gallery-grid { grid-template-columns: repeat(2, 1fr); }
       .gallery-item.tall { grid-row: span 1; }
-      .gallery-item.tall .img-box { min-height: 220px; }
+      .gallery-item.tall .img-box { height: 220px; }
       footer { padding: 48px 24px 24px; }
       .footer-grid { grid-template-columns: 1fr; gap: 40px; }
       .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
@@ -832,6 +832,7 @@
     }
     .pdf-card-img {
       width: 100%;
+      min-height: 120px;
       background: #F5F0E8;
       display: flex;
       align-items: center;
@@ -1300,20 +1301,29 @@
   /* ── SCROLL REVEAL ─────────────────────────────── */
   const ro = new IntersectionObserver(entries => {
     entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); ro.unobserve(e.target); } });
-  }, { threshold: 0.12 });
+  }, { threshold: 0, rootMargin: '0px 0px 80px 0px' });
   document.querySelectorAll('.reveal').forEach(el => ro.observe(el));
 
-  const so = new IntersectionObserver(entries => {
-    entries.forEach(e => {
+  const soGroups = document.querySelectorAll('.gallery-grid, .about-stats, .pdf-grid');
+  function revealStaggerGroup(grp) {
+    grp.querySelectorAll('.stagger-item').forEach(function(el, i) {
+      setTimeout(function() { el.classList.add('visible'); }, i * 110);
+    });
+  }
+  const so = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
       if (!e.isIntersecting) return;
-      const grp = e.target.closest('.gallery-grid, .about-stats, .pdf-grid');
-      if (!grp) return;
-      grp.querySelectorAll('.stagger-item').forEach((el, i) => setTimeout(() => el.classList.add('visible'), i * 110));
+      revealStaggerGroup(e.target);
       so.unobserve(e.target);
     });
-  }, { threshold: 0.1 });
-  document.querySelectorAll('.gallery-grid .stagger-item:first-child, .about-stats .stagger-item:first-child, .pdf-grid .stagger-item:first-child')
-    .forEach(el => so.observe(el));
+  }, { threshold: 0, rootMargin: '0px 0px 60px 0px' });
+  soGroups.forEach(function(grp) { so.observe(grp); });
+  // Fallback: reveal all stagger items after 2.5s in case observer misfires
+  setTimeout(function() {
+    document.querySelectorAll('.stagger-item:not(.visible)').forEach(function(el) {
+      el.classList.add('visible');
+    });
+  }, 2500);
 
   /* ── MENU TABS ─────────────────────────────────── */
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -1362,7 +1372,7 @@
     var btn = form.querySelector('.form-submit');
     btn.textContent = 'Enviando…';
     btn.disabled = true;
-    fetch('https://formspree.io/f/xyzxyzxyz', {
+    fetch('https://formspree.io/f/xlgvryla', {
       method: 'POST',
       headers: { 'Accept': 'application/json' },
       body: new FormData(form)
