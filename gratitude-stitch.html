@@ -56,18 +56,18 @@
 
     /* ── SCROLL REVEAL ─────────────────────────────── */
     .reveal {
-      opacity: 0;
-      transform: translateY(28px);
+      opacity: 1;
+      transform: none;
       transition: opacity .65s ease, transform .65s ease;
     }
-    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal.visible { opacity: 1; transform: none; }
 
     .stagger-item {
-      opacity: 0;
-      transform: translateY(24px);
+      opacity: 1;
+      transform: none;
       transition: opacity .55s ease, transform .55s ease;
     }
-    .stagger-item.visible { opacity: 1; transform: translateY(0); }
+    .stagger-item.visible { opacity: 1; transform: none; }
 
     /* ── NAVBAR ─────────────────────────────────────── */
     nav {
@@ -864,21 +864,7 @@
       .pdf-grid { grid-template-columns: 1fr; }
     }
   
-    /* ── MOBILE/TOUCH: skip all reveal/stagger animations ── */
-    @media (max-width: 1024px) {
-      .reveal, .stagger-item {
-        opacity: 1 !important;
-        transform: none !important;
-        transition: none !important;
-      }
-    }
-    @media (hover: none) and (pointer: coarse) {
-      .reveal, .stagger-item {
-        opacity: 1 !important;
-        transform: none !important;
-        transition: none !important;
-      }
-    }
+    /* reveal/stagger: elements start visible, animations are progressive enhancement */
   </style>
 </head>
 <body>
