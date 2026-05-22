@@ -1337,7 +1337,7 @@
   /* ── SCROLL REVEAL ─────────────────────────────── */
   const ro = new IntersectionObserver(entries => {
     entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); ro.unobserve(e.target); } });
-  }, { threshold: 0, rootMargin: '0px 0px 80px 0px' });
+  }, { threshold: 0, rootMargin: '0px 0px 300px 0px' });
   document.querySelectorAll('.reveal').forEach(el => ro.observe(el));
 
   const soGroups = document.querySelectorAll('.gallery-grid, .about-stats, .pdf-grid');
@@ -1352,7 +1352,7 @@
       revealStaggerGroup(e.target);
       so.unobserve(e.target);
     });
-  }, { threshold: 0, rootMargin: '0px 0px 60px 0px' });
+  }, { threshold: 0, rootMargin: '0px 0px 300px 0px' });
   soGroups.forEach(function(grp) { so.observe(grp); });
   // Fallback: reveal all stagger items after 2.5s in case observer misfires
   setTimeout(function() {
@@ -1517,6 +1517,13 @@
       requestAnimationFrame(tick);
     })();
   })();
-  </script>
+  
+  /* ── FALLBACK: reveal all after 800ms in case observer misfires ── */
+  setTimeout(function() {
+    document.querySelectorAll('.reveal:not(.visible), .stagger-item:not(.visible)').forEach(function(el) {
+      el.classList.add('visible');
+    });
+  }, 800);
+</script>
 </body>
 </html>
