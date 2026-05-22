@@ -2,7 +2,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
 const SECRET = new TextEncoder().encode(
-  process.env.NEXTAUTH_SECRET || "gratitude_fallback_secret_change_me"
+  process.env.NEXTAUTH_SECRET
 );
 
 const COOKIE_NAME = "gratitude_admin_token";
