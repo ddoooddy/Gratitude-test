@@ -1,4 +1,27 @@
-<!DOCTYPE html>
+<!DOCTYPE
+  // ── Immediately show all elements on touch/mobile devices ──
+  (function() {
+    var isMobile = ('ontouchstart' in window) || 
+                   (navigator.maxTouchPoints > 0) || 
+                   window.matchMedia('(hover: none)').matches ||
+                   window.matchMedia('(max-width: 1024px)').matches;
+    if (isMobile) {
+      // Run immediately for elements already in DOM
+      function showAll() {
+        document.querySelectorAll('.reveal, .stagger-item').forEach(function(el) {
+          el.classList.add('visible');
+          el.style.opacity = '1';
+          el.style.transform = 'none';
+        });
+      }
+      showAll();
+      // Also run after DOM ready in case elements added later
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', showAll);
+      }
+    }
+  })();
+ html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -868,8 +891,15 @@
       .pdf-grid { grid-template-columns: 1fr; }
     }
   
-    /* ── MOBILE: skip all reveal/stagger animations ── */
-    @media (max-width: 768px) {
+    /* ── MOBILE/TOUCH: skip all reveal/stagger animations ── */
+    @media (max-width: 1024px) {
+      .reveal, .stagger-item {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+      }
+    }
+    @media (hover: none) and (pointer: coarse) {
       .reveal, .stagger-item {
         opacity: 1 !important;
         transform: none !important;
@@ -1347,8 +1377,11 @@
       const panel = document.querySelector('[data-panel="' + btn.dataset.tab + '"]');
       panel.classList.add('active');
       panel.querySelectorAll('.menu-card').forEach((c, i) => {
-        c.style.cssText = 'opacity:0;transform:translateY(20px);transition:opacity .4s ease ' + (i*.1) + 's,transform .4s ease ' + (i*.1) + 's';
-        requestAnimationFrame(() => requestAnimationFrame(() => { c.style.opacity='1'; c.style.transform='translateY(0)'; }));
+        var isMob = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+        if (!isMob) {
+          c.style.cssText = 'opacity:0;transform:translateY(20px);transition:opacity .4s ease ' + (i*.1) + 's,transform .4s ease ' + (i*.1) + 's';
+          requestAnimationFrame(() => requestAnimationFrame(() => { c.style.opacity='1'; c.style.transform='translateY(0)'; }));
+        }
       });
     });
   });
@@ -1358,8 +1391,11 @@
     if (e.isIntersecting && !menuDone) {
       menuDone = true;
       document.querySelector('.menu-panel.active').querySelectorAll('.menu-card').forEach((c, i) => {
-        c.style.cssText = 'opacity:0;transform:translateY(20px);transition:opacity .4s ease ' + (i*.1) + 's,transform .4s ease ' + (i*.1) + 's';
-        requestAnimationFrame(() => requestAnimationFrame(() => { c.style.opacity='1'; c.style.transform='translateY(0)'; }));
+        var isMob = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+        if (!isMob) {
+          c.style.cssText = 'opacity:0;transform:translateY(20px);transition:opacity .4s ease ' + (i*.1) + 's,transform .4s ease ' + (i*.1) + 's';
+          requestAnimationFrame(() => requestAnimationFrame(() => { c.style.opacity='1'; c.style.transform='translateY(0)'; }));
+        }
       });
     }
   }, { threshold: 0.2 }).observe(document.getElementById('menu'));
