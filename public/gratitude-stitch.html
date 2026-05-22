@@ -3,6 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    /* Force all animated elements visible immediately */
+    *, *::before, *::after {
+      animation-duration: 0.001s !important;
+      animation-delay: 0s !important;
+    }
+  </style>
   <title>Gratitude — Restaurante & Café | Buenos Aires</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -169,7 +176,7 @@
       text-transform: uppercase;
       color: var(--sage);
       margin-bottom: 28px;
-      opacity: 0;
+      opacity: 1;
       animation: fadeUpIn .8s ease .3s forwards;
     }
     .hero-title {
@@ -179,7 +186,7 @@
       color: var(--espresso);
       line-height: .92;
       letter-spacing: -.02em;
-      opacity: 0;
+      opacity: 1;
       animation: fadeUpIn .9s ease .5s forwards;
     }
     .hero-divider {
@@ -188,7 +195,7 @@
       justify-content: center;
       gap: 16px;
       margin: 28px 0;
-      opacity: 0;
+      opacity: 1;
       animation: fadeUpIn .7s ease .75s forwards;
     }
     .hero-divider span { height: 1px; width: 48px; background: var(--wood); display: block; }
@@ -202,7 +209,7 @@
       margin: 0 auto 40px;
       line-height: 1.55;
       min-height: 1.8rem;
-      opacity: 0;
+      opacity: 1;
       animation: fadeUpIn .7s ease .9s forwards;
     }
     .tw-cursor {
@@ -216,7 +223,7 @@
       gap: 16px;
       justify-content: center;
       flex-wrap: wrap;
-      opacity: 0;
+      opacity: 1;
       animation: fadeUpIn .7s ease 1.1s forwards;
     }
     @keyframes fadeUpIn {
@@ -264,7 +271,7 @@
       flex-direction: column;
       align-items: center;
       gap: 8px;
-      opacity: 0;
+      opacity: 1;
       animation: fadeUpIn .7s ease 1.4s forwards;
     }
     .hero-scroll span {
@@ -1320,26 +1327,20 @@
   }
   setTimeout(tw, 1300);
 
-  /* ── SCROLL REVEAL ─────────────────────────────── */
-  const ro = new IntersectionObserver(entries => {
-    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); ro.unobserve(e.target); } });
-  }, { threshold: 0, rootMargin: '0px 0px 300px 0px' });
-  document.querySelectorAll('.reveal').forEach(el => ro.observe(el));
+  /* ── SCROLL REVEAL: force all visible immediately ─ */
+  document.querySelectorAll('.reveal, .stagger-item, .fade-in, .animate').forEach(function(el) {
+    el.style.opacity = '1';
+    el.style.transform = 'none';
+    el.style.visibility = 'visible';
+    el.classList.add('visible');
+  });
 
-  const soGroups = document.querySelectorAll('.gallery-grid, .about-stats, .pdf-grid');
-  function revealStaggerGroup(grp) {
-    grp.querySelectorAll('.stagger-item').forEach(function(el, i) {
-      setTimeout(function() { el.classList.add('visible'); }, i * 110);
-    });
-  }
-  const so = new IntersectionObserver(function(entries) {
-    entries.forEach(function(e) {
-      if (!e.isIntersecting) return;
-      revealStaggerGroup(e.target);
-      so.unobserve(e.target);
-    });
-  }, { threshold: 0, rootMargin: '0px 0px 300px 0px' });
-  soGroups.forEach(function(grp) { so.observe(grp); });
+  // Stagger items: all visible immediately
+  document.querySelectorAll('.stagger-item').forEach(function(el) {
+    el.style.opacity = '1';
+    el.style.transform = 'none';
+    el.classList.add('visible');
+  });
   // Fallback: reveal all stagger items after 2.5s in case observer misfires
   setTimeout(function() {
     document.querySelectorAll('.stagger-item:not(.visible)').forEach(function(el) {
@@ -1504,12 +1505,7 @@
     })();
   })();
   
-  /* ── FALLBACK: reveal all after 800ms in case observer misfires ── */
-  setTimeout(function() {
-    document.querySelectorAll('.reveal:not(.visible), .stagger-item:not(.visible)').forEach(function(el) {
-      el.classList.add('visible');
-    });
-  }, 800);
+  
 </script>
 </body>
 </html>
