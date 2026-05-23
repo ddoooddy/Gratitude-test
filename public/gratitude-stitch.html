@@ -69,24 +69,28 @@ input,textarea,select{font-family:var(--sans)}
 @keyframes loaderWord{to{opacity:1;transform:none}}
 @keyframes loaderLine{to{transform:scaleX(1)}}
 
-/* ── CURSOR ──────────────────────────────────────────── */
+/* ── CURSOR (desktop / mouse only) ──────────────────── */
 #cursor,#cursor-dot{
   position:fixed;pointer-events:none;z-index:9998;
   border-radius:50%;
+  display:none; /* hidden by default, enabled by JS on hover-capable devices */
 }
-#cursor{
-  width:36px;height:36px;
-  border:1.5px solid var(--terra);
-  transform:translate(-50%,-50%);
-  transition:width .3s,height .3s,border-color .3s;
+@media(hover:hover) and (pointer:fine){
+  #cursor{
+    display:block;
+    width:36px;height:36px;
+    border:1.5px solid var(--terra);
+    transform:translate(-50%,-50%);
+    transition:width .3s,height .3s,border-color .3s;
+  }
+  #cursor-dot{
+    display:block;
+    width:5px;height:5px;
+    background:var(--gold);
+    transform:translate(-50%,-50%);
+  }
+  #cursor.hovering{width:56px;height:56px;border-color:var(--gold);opacity:.7}
 }
-#cursor-dot{
-  width:5px;height:5px;
-  background:var(--gold);
-  transform:translate(-50%,-50%);
-}
-#cursor.hovering{width:56px;height:56px;border-color:var(--gold);opacity:.7}
-@media(hover:none){#cursor,#cursor-dot{display:none}}
 
 /* ── NAVBAR ──────────────────────────────────────────── */
 #nav{
@@ -1117,28 +1121,34 @@ footer{background:var(--espresso);color:var(--cream);padding:clamp(48px,7vw,80px
     </div>
   </div>
   <div class="gallery-grid" id="gallery-grid">
-    <div class="gallery-item" data-filter="interior" tabindex="0" role="button" aria-label="Ver imagen">
-      <img src="/hero-gratitude.jpg" alt="Interior Gratitude Palermo" loading="lazy" onerror="this.style.display='none'">
-      <div class="gallery-overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
-    </div>
-    <div class="gallery-item" data-filter="platos" tabindex="0" role="button" aria-label="Ver imagen" style="min-height:200px">
-      <img src="/hero-gratitude.jpg" alt="Platos de Gratitude" loading="lazy" onerror="this.style.display='none'">
-      <div class="gallery-overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
-    </div>
-    <div class="gallery-item" data-filter="ambiente" tabindex="0" role="button" aria-label="Ver imagen" style="min-height:280px">
-      <img src="/hero-gratitude.jpg" alt="Ambiente Gratitude" loading="lazy" onerror="this.style.display='none'">
-      <div class="gallery-overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
-    </div>
-    <div class="gallery-item" data-filter="interior" tabindex="0" role="button" aria-label="Ver imagen" style="min-height:320px">
-      <img src="/hero-gratitude.jpg" alt="Detalle interior" loading="lazy" onerror="this.style.display='none'">
-      <div class="gallery-overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
-    </div>
+    <!-- Torta de zanahoria con frosting -->
     <div class="gallery-item" data-filter="platos" tabindex="0" role="button" aria-label="Ver imagen">
-      <img src="/hero-gratitude.jpg" alt="Desayuno artesanal" loading="lazy" onerror="this.style.display='none'">
+      <img src="/g1.jpg" alt="Torta de zanahoria con frosting de queso crema" loading="lazy" onerror="this.style.display='none'">
       <div class="gallery-overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
     </div>
-    <div class="gallery-item" data-filter="ambiente" tabindex="0" role="button" aria-label="Ver imagen">
-      <img src="/hero-gratitude.jpg" alt="Terraza Gratitude" loading="lazy" onerror="this.style.display='none'">
+    <!-- Sandwich vegano en tabla -->
+    <div class="gallery-item" data-filter="platos" tabindex="0" role="button" aria-label="Ver imagen" style="min-height:260px">
+      <img src="/g2.jpg" alt="Sandwich vegano de tofu con palta y rúcula" loading="lazy" onerror="this.style.display='none'">
+      <div class="gallery-overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
+    </div>
+    <!-- Torta de chocolate con frutillas -->
+    <div class="gallery-item" data-filter="platos" tabindex="0" role="button" aria-label="Ver imagen">
+      <img src="/g3.jpg" alt="Torta de chocolate con frutillas frescas" loading="lazy" onerror="this.style.display='none'">
+      <div class="gallery-overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
+    </div>
+    <!-- Desayuno completo con huevos y palta -->
+    <div class="gallery-item" data-filter="platos" tabindex="0" role="button" aria-label="Ver imagen" style="min-height:300px">
+      <img src="/g4.jpg" alt="Desayuno completo con huevos revueltos y palta" loading="lazy" onerror="this.style.display='none'">
+      <div class="gallery-overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
+    </div>
+    <!-- Bowl colorido con jugo -->
+    <div class="gallery-item" data-filter="platos" tabindex="0" role="button" aria-label="Ver imagen">
+      <img src="/g5.jpg" alt="Bowl Gratitude con vegetales, garbanzos y jugo fresco" loading="lazy" onerror="this.style.display='none'">
+      <div class="gallery-overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
+    </div>
+    <!-- Interior / hero -->
+    <div class="gallery-item" data-filter="interior" tabindex="0" role="button" aria-label="Ver imagen" style="min-height:240px">
+      <img src="/hero-gratitude.jpg" alt="Interior Gratitude Palermo" loading="lazy" onerror="this.style.display='none'">
       <div class="gallery-overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
     </div>
   </div>
