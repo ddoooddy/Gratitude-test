@@ -1,1511 +1,1660 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    /* Force all animated elements visible immediately */
-    *, *::before, *::after {
-      animation-duration: 0.001s !important;
-      animation-delay: 0s !important;
-    }
-  </style>
-  <title>Gratitude — Restaurante & Café | Buenos Aires</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gratitude — Restaurante & Café · Buenos Aires</title>
+<meta name="description" content="Restaurante & Café en Palermo y Victoria, Buenos Aires. Cocina de autor con ingredientes frescos y de temporada.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+/* ── TOKENS ─────────────────────────────────────────── */
+:root{
+  --cream:#FAF8F3;
+  --sage:#7A8C6E;
+  --terra:#C17B5C;
+  --gold:#C9A96E;
+  --espresso:#2D1F14;
+  --espresso2:#3d2a1a;
+  --white:#fff;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'DM Sans',system-ui,sans-serif;
+  --ease:cubic-bezier(.25,.46,.45,.94);
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --nav-h:72px;
+}
 
-    :root {
-      --cream:    #FDFCF9;
-      --sand:     #F4EDE3;
-      --parchment:#EDE3D6;
-      --border:   #E0D2C0;
-      --sage:     #7A9268;
-      --sage-lt:  #A8BF9A;
-      --wood:     #C8A87E;
-      --warm:     #B89278;
-      --espresso: #3D2E22;
-      --dark:     #241A10;
-    }
+/* ── RESET ───────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:16px}
+body{
+  font-family:var(--sans);
+  background:var(--cream);
+  color:var(--espresso);
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+img{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;border:none;background:none;font-family:var(--sans)}
+ul{list-style:none}
+input,textarea,select{font-family:var(--sans)}
 
-    html { scroll-behavior: smooth; }
+/* ── LOADER ──────────────────────────────────────────── */
+#loader{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--espresso);
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:24px;
+  transition:opacity .6s var(--ease), visibility .6s;
+}
+#loader.done{opacity:0;visibility:hidden;pointer-events:none}
+.loader-word{
+  font-family:var(--serif);
+  font-size:clamp(2rem,6vw,4rem);
+  font-weight:300;
+  letter-spacing:.2em;
+  color:var(--cream);
+  opacity:0;
+  transform:translateY(16px);
+  animation:loaderWord .8s var(--ease-out) forwards;
+}
+.loader-line{
+  width:48px;height:1px;background:var(--gold);
+  transform:scaleX(0);transform-origin:left;
+  animation:loaderLine 1s var(--ease) .5s forwards;
+}
+@keyframes loaderWord{to{opacity:1;transform:none}}
+@keyframes loaderLine{to{transform:scaleX(1)}}
 
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--cream);
-      color: var(--espresso);
-      -webkit-font-smoothing: antialiased;
-    }
+/* ── CURSOR ──────────────────────────────────────────── */
+#cursor,#cursor-dot{
+  position:fixed;pointer-events:none;z-index:9998;
+  border-radius:50%;
+}
+#cursor{
+  width:36px;height:36px;
+  border:1.5px solid var(--terra);
+  transform:translate(-50%,-50%);
+  transition:width .3s,height .3s,border-color .3s;
+}
+#cursor-dot{
+  width:5px;height:5px;
+  background:var(--gold);
+  transform:translate(-50%,-50%);
+}
+#cursor.hovering{width:56px;height:56px;border-color:var(--gold);opacity:.7}
+@media(hover:none){#cursor,#cursor-dot{display:none}}
 
-    body.has-cursor,
-    body.has-cursor * { cursor: none !important; }
+/* ── NAVBAR ──────────────────────────────────────────── */
+#nav{
+  position:fixed;top:0;left:0;right:0;z-index:900;
+  height:var(--nav-h);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 clamp(24px,5vw,64px);
+  transition:background .4s var(--ease),backdrop-filter .4s,box-shadow .4s;
+}
+#nav.scrolled{
+  background:rgba(250,248,243,.92);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  box-shadow:0 1px 0 rgba(45,31,20,.1);
+}
+.nav-logo{
+  font-family:var(--serif);
+  font-size:1.4rem;
+  font-weight:400;
+  letter-spacing:.08em;
+  color:var(--white);
+  transition:color .4s;
+}
+#nav.scrolled .nav-logo{color:var(--espresso)}
+.nav-links{
+  display:flex;align-items:center;gap:36px;
+}
+.nav-links a{
+  font-size:.8rem;
+  font-weight:400;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.85);
+  transition:color .3s;
+  position:relative;
+}
+.nav-links a::after{
+  content:'';position:absolute;left:0;bottom:-4px;
+  width:0;height:1px;background:var(--gold);
+  transition:width .3s var(--ease);
+}
+.nav-links a:hover::after{width:100%}
+#nav.scrolled .nav-links a{color:var(--espresso)}
+.nav-reserve{
+  padding:10px 22px;
+  border:1px solid rgba(255,255,255,.5);
+  border-radius:40px;
+  font-size:.75rem;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  color:var(--white);
+  transition:all .3s;
+}
+.nav-reserve:hover{background:var(--gold);border-color:var(--gold);color:var(--espresso)}
+#nav.scrolled .nav-reserve{border-color:var(--terra);color:var(--terra)}
+#nav.scrolled .nav-reserve:hover{background:var(--terra);color:var(--white)}
+.nav-hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px}
+.nav-hamburger span{
+  width:24px;height:1.5px;background:var(--white);
+  transition:transform .3s,opacity .3s,background .4s;
+  display:block;
+}
+#nav.scrolled .nav-hamburger span{background:var(--espresso)}
+@media(max-width:768px){
+  .nav-links,.nav-reserve{display:none}
+  .nav-hamburger{display:flex}
+}
 
-    img { display: block; width: 100%; height: 100%; object-fit: cover; }
-    a { text-decoration: none; color: inherit; }
+/* ── MOBILE MENU OVERLAY ─────────────────────────────── */
+#mobile-menu{
+  position:fixed;inset:0;z-index:800;
+  background:var(--espresso);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px;
+  opacity:0;visibility:hidden;transition:opacity .4s,visibility .4s;
+}
+#mobile-menu.open{opacity:1;visibility:visible}
+#mobile-menu a{
+  font-family:var(--serif);
+  font-size:2.2rem;
+  font-weight:300;
+  color:var(--cream);
+  letter-spacing:.05em;
+  transition:color .3s;
+}
+#mobile-menu a:hover{color:var(--gold)}
+.close-btn{
+  position:absolute;top:28px;right:28px;
+  font-size:1.6rem;color:var(--cream);cursor:pointer;background:none;border:none;
+}
 
-    /* ── CUSTOM CURSOR ─────────────────────────────── */
-    #cursor {
-      position: fixed;
-      top: 0; left: 0;
-      width: 20px; height: 20px;
-      background: rgba(200, 168, 126, 0.5);
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 9999;
-      transform: translate(-50%, -50%);
-      transition: width .3s ease, height .3s ease, background .3s ease, opacity .3s ease;
-      will-change: left, top;
-    }
-    #cursor.hover { width: 40px; height: 40px; background: rgba(200, 168, 126, 0.28); }
-    #cursor.hidden { opacity: 0; }
+/* ── HERO ────────────────────────────────────────────── */
+#hero{
+  position:relative;
+  height:100svh;min-height:600px;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+}
+.hero-bg{
+  position:absolute;inset:0;
+  background:url('/hero-gratitude.jpg') center/cover no-repeat;
+  transform:scale(1.08);
+  will-change:transform;
+}
+.hero-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(to bottom,rgba(45,31,20,.55) 0%,rgba(45,31,20,.2) 50%,rgba(45,31,20,.65) 100%);
+}
+.hero-content{
+  position:relative;z-index:2;
+  text-align:center;
+  padding:0 24px;
+  max-width:900px;
+}
+.hero-tag{
+  font-size:.72rem;
+  letter-spacing:.3em;
+  text-transform:uppercase;
+  color:var(--gold);
+  margin-bottom:20px;
+  opacity:0;animation:fadeUp .8s var(--ease-out) 1.4s forwards;
+}
+.hero-title{
+  font-family:var(--serif);
+  font-size:clamp(3.2rem,9vw,7.5rem);
+  font-weight:300;
+  line-height:.95;
+  color:var(--white);
+  letter-spacing:.02em;
+  margin-bottom:24px;
+  opacity:0;animation:fadeUp .9s var(--ease-out) 1.6s forwards;
+}
+.hero-title em{font-style:italic;color:var(--gold)}
+.hero-sub{
+  font-size:clamp(1rem,2vw,1.2rem);
+  font-weight:300;
+  color:rgba(255,255,255,.8);
+  letter-spacing:.06em;
+  margin-bottom:48px;
+  opacity:0;animation:fadeUp .8s var(--ease-out) 1.8s forwards;
+}
+.hero-ctas{
+  display:flex;gap:16px;justify-content:center;flex-wrap:wrap;
+  opacity:0;animation:fadeUp .8s var(--ease-out) 2s forwards;
+}
+.btn-primary{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:16px 36px;
+  background:var(--gold);
+  color:var(--espresso);
+  font-size:.8rem;
+  font-weight:500;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  border-radius:60px;
+  transition:background .3s,transform .2s;
+  position:relative;overflow:hidden;
+}
+.btn-primary:hover{background:#d4b075;transform:translateY(-2px)}
+.btn-outline{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:15px 36px;
+  border:1px solid rgba(255,255,255,.6);
+  color:var(--white);
+  font-size:.8rem;
+  font-weight:400;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  border-radius:60px;
+  transition:background .3s,border-color .3s;
+}
+.btn-outline:hover{background:rgba(255,255,255,.12);border-color:var(--white)}
+.hero-scroll{
+  position:absolute;bottom:32px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  color:rgba(255,255,255,.6);
+  font-size:.65rem;letter-spacing:.2em;text-transform:uppercase;
+  animation:scrollBob 2s ease-in-out 2.5s infinite;
+  opacity:0;animation-fill-mode:forwards;
+}
+.hero-scroll svg{width:20px;opacity:.6}
+@keyframes scrollBob{
+  0%{opacity:1;transform:translateX(-50%) translateY(0)}
+  50%{transform:translateX(-50%) translateY(6px)}
+  100%{opacity:1;transform:translateX(-50%) translateY(0)}
+}
+@keyframes fadeUp{to{opacity:1;transform:none}}
 
-    /* ── SCROLL REVEAL ─────────────────────────────── */
-    .reveal {
-      opacity: 1;
-      transform: none;
-      transition: opacity .65s ease, transform .65s ease;
-    }
-    .reveal.visible { opacity: 1; transform: none; }
+/* ── MARQUEE ─────────────────────────────────────────── */
+.marquee-strip{
+  background:var(--espresso);
+  padding:14px 0;
+  overflow:hidden;
+  white-space:nowrap;
+}
+.marquee-inner{
+  display:inline-flex;
+  animation:marquee 28s linear infinite;
+}
+.marquee-item{
+  display:inline-flex;align-items:center;gap:32px;
+  padding:0 32px;
+  font-size:.72rem;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  color:var(--gold);
+  font-weight:300;
+}
+.marquee-item::after{content:'✦';font-size:.6rem;color:var(--terra)}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 
-    .stagger-item {
-      opacity: 1;
-      transform: none;
-      transition: opacity .55s ease, transform .55s ease;
-    }
-    .stagger-item.visible { opacity: 1; transform: none; }
+/* ── SECTION COMMONS ─────────────────────────────────── */
+section{padding:clamp(72px,10vw,140px) clamp(24px,6vw,80px)}
+.section-label{
+  font-size:.7rem;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  color:var(--terra);
+  margin-bottom:16px;
+  display:block;
+}
+.section-title{
+  font-family:var(--serif);
+  font-size:clamp(2.4rem,5vw,4rem);
+  font-weight:300;
+  line-height:1.1;
+  color:var(--espresso);
+  margin-bottom:24px;
+}
+.section-title em{font-style:italic;color:var(--sage)}
+.section-line{width:48px;height:1px;background:var(--gold);margin-bottom:32px}
+.section-lead{
+  font-size:1.05rem;
+  font-weight:300;
+  line-height:1.8;
+  color:rgba(45,31,20,.75);
+  max-width:580px;
+}
 
-    /* ── NAVBAR ─────────────────────────────────────── */
-    nav {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
-      padding: 24px 48px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      transition: background .3s, padding .3s, box-shadow .3s;
-    }
-    nav.scrolled {
-      background: rgba(253, 252, 249, 0.96);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      padding: 14px 48px;
-      box-shadow: 0 1px 24px rgba(61, 46, 34, 0.07);
-    }
-    .nav-logo {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.6rem;
-      font-weight: 400;
-      color: var(--espresso);
-      letter-spacing: .04em;
-      transition: color .3s;
-    }
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 40px;
-      list-style: none;
-    }
-    .nav-links a {
-      font-size: .75rem;
-      font-weight: 500;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: rgba(61, 46, 34, .7);
-      transition: color .3s;
-    }
-    .nav-links a:hover { color: var(--sage); }
-    .nav-cta {
-      font-size: .75rem;
-      font-weight: 500;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      padding: 10px 24px;
-      border: 1px solid var(--espresso);
-      color: var(--espresso);
-      transition: all .3s;
-    }
-    .nav-cta:hover { background: var(--espresso); color: var(--cream); }
+/* ── REVEAL ANIMATIONS ───────────────────────────────── */
+.reveal{
+  opacity:1;transform:none;
+  transition:opacity .8s var(--ease-out),transform .8s var(--ease-out);
+}
+.reveal.hidden{opacity:0;transform:translateY(32px)}
+.reveal.hidden.left{transform:translateX(-32px)}
+.reveal.hidden.right{transform:translateX(32px)}
+.stagger > *{
+  opacity:1;transform:none;
+  transition:opacity .6s var(--ease-out),transform .6s var(--ease-out);
+}
+.stagger.hidden > *{opacity:0;transform:translateY(24px)}
 
-    /* ── HERO ───────────────────────────────────────── */
-    #hero {
-      position: relative;
-      height: 100vh;
-      min-height: 640px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-    .hero-img {
-      position: absolute;
-      inset: 0;
-      overflow: hidden;
-    }
-    .hero-img img {
-      width: 100%;
-      height: 130%;
-      object-fit: cover;
-      object-position: center 30%;
-      will-change: transform;
-    }
-    .hero-overlay {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        to bottom,
-        rgba(253,252,249,.08) 0%,
-        rgba(253,252,249,.18) 40%,
-        rgba(253,252,249,.38) 70%,
-        rgba(253,252,249,.55) 100%
-      );
-    }
-    .hero-content {
-      position: relative;
-      z-index: 2;
-      text-align: center;
-      padding: 0 24px;
-      will-change: transform;
-    }
-    .hero-eyebrow {
-      font-size: .68rem;
-      font-weight: 500;
-      letter-spacing: .45em;
-      text-transform: uppercase;
-      color: var(--sage);
-      margin-bottom: 28px;
-      opacity: 1;
-      animation: fadeUpIn .8s ease .3s forwards;
-    }
-    .hero-title {
-      font-family: 'Playfair Display', serif;
-      font-size: clamp(4.5rem, 13vw, 9.5rem);
-      font-weight: 400;
-      color: var(--espresso);
-      line-height: .92;
-      letter-spacing: -.02em;
-      opacity: 1;
-      animation: fadeUpIn .9s ease .5s forwards;
-    }
-    .hero-divider {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      margin: 28px 0;
-      opacity: 1;
-      animation: fadeUpIn .7s ease .75s forwards;
-    }
-    .hero-divider span { height: 1px; width: 48px; background: var(--wood); display: block; }
-    .hero-divider i { color: var(--wood); font-style: normal; font-size: .9rem; }
-    .hero-tagline {
-      font-family: 'Playfair Display', serif;
-      font-style: italic;
-      font-size: 1.2rem;
-      color: rgba(61, 46, 34, .75);
-      max-width: 460px;
-      margin: 0 auto 40px;
-      line-height: 1.55;
-      min-height: 1.8rem;
-      opacity: 1;
-      animation: fadeUpIn .7s ease .9s forwards;
-    }
-    .tw-cursor {
-      font-style: normal;
-      animation: twBlink .7s step-end infinite;
-    }
-    @keyframes twBlink { 50% { opacity: 0; } }
+/* ── NOSOTROS ────────────────────────────────────────── */
+#nosotros{background:var(--cream)}
+.nosotros-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:clamp(40px,6vw,80px);
+  align-items:center;
+  max-width:1200px;margin:0 auto;
+}
+.nosotros-text{max-width:520px}
+.nosotros-image{
+  position:relative;
+  border-radius:4px;
+  overflow:hidden;
+  aspect-ratio:4/5;
+}
+.nosotros-image img{
+  width:100%;height:100%;object-fit:cover;
+  transition:transform 6s var(--ease);
+}
+.nosotros-image:hover img{transform:scale(1.04)}
+.nosotros-image-badge{
+  position:absolute;bottom:0;right:0;
+  background:var(--espresso);
+  color:var(--cream);
+  padding:20px 24px;
+  font-family:var(--serif);
+  font-size:1rem;
+  font-weight:300;
+  line-height:1.4;
+  letter-spacing:.03em;
+  border-radius:4px 0 0 0;
+}
+.nosotros-image-badge strong{display:block;font-size:2rem;font-weight:400;color:var(--gold)}
+.counters{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:24px;margin-top:48px;
+  padding-top:40px;border-top:1px solid rgba(45,31,20,.1);
+}
+.counter-item{text-align:center}
+.counter-num{
+  font-family:var(--serif);
+  font-size:2.8rem;
+  font-weight:300;
+  color:var(--terra);
+  line-height:1;
+}
+.counter-label{
+  font-size:.72rem;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:rgba(45,31,20,.6);
+  margin-top:6px;
+}
+@media(max-width:768px){
+  .nosotros-grid{grid-template-columns:1fr}
+  .nosotros-image{aspect-ratio:16/9}
+}
 
-    .hero-ctas {
-      display: flex;
-      gap: 16px;
-      justify-content: center;
-      flex-wrap: wrap;
-      opacity: 1;
-      animation: fadeUpIn .7s ease 1.1s forwards;
-    }
-    @keyframes fadeUpIn {
-      from { opacity: 0; transform: translateY(18px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
+/* ── MENU ────────────────────────────────────────────── */
+#menu{background:var(--espresso);color:var(--cream)}
+#menu .section-title{color:var(--cream)}
+#menu .section-lead{color:rgba(250,248,243,.65)}
+#menu .section-line{background:var(--gold)}
+.menu-header{
+  max-width:1300px;margin:0 auto 56px;
+  display:flex;align-items:flex-end;justify-content:space-between;
+  flex-wrap:wrap;gap:24px;
+}
+.menu-search-wrap{position:relative}
+.menu-search{
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:40px;
+  padding:12px 20px 12px 44px;
+  color:var(--cream);
+  font-size:.85rem;
+  width:260px;
+  outline:none;
+  transition:border-color .3s,background .3s;
+}
+.menu-search::placeholder{color:rgba(250,248,243,.4)}
+.menu-search:focus{background:rgba(255,255,255,.1);border-color:var(--gold)}
+.menu-search-icon{
+  position:absolute;left:16px;top:50%;transform:translateY(-50%);
+  opacity:.5;pointer-events:none;
+}
+.search-dropdown{
+  position:absolute;top:calc(100% + 8px);left:0;right:0;
+  background:var(--espresso2);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:12px;
+  overflow:hidden;
+  display:none;z-index:100;
+}
+.search-dropdown.show{display:block}
+.search-result-item{
+  padding:12px 20px;
+  font-size:.85rem;
+  cursor:pointer;
+  transition:background .2s;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.search-result-item:last-child{border:none}
+.search-result-item:hover{background:rgba(255,255,255,.08)}
+.sri-name{color:var(--cream);font-weight:500}
+.sri-cat{color:var(--gold);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase}
+.menu-cats{
+  display:flex;gap:8px;flex-wrap:wrap;
+  max-width:1300px;margin:0 auto 40px;
+}
+.cat-btn{
+  padding:8px 20px;
+  border-radius:40px;
+  border:1px solid rgba(255,255,255,.2);
+  color:rgba(250,248,243,.7);
+  font-size:.75rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  transition:all .25s;
+  position:relative;overflow:hidden;
+}
+.cat-btn:hover,.cat-btn.active{
+  background:var(--gold);
+  border-color:var(--gold);
+  color:var(--espresso);
+}
+.menu-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  gap:2px;
+  max-width:1300px;margin:0 auto;
+}
+.menu-card{
+  background:rgba(255,255,255,.04);
+  padding:32px;
+  border:1px solid rgba(255,255,255,.06);
+  transition:background .3s,transform .3s;
+}
+.menu-card:hover{background:rgba(255,255,255,.08);transform:translateY(-2px)}
+.menu-card.hidden{display:none}
+.mc-cat{font-size:.65rem;letter-spacing:.2em;text-transform:uppercase;color:var(--terra);margin-bottom:12px}
+.mc-name{font-family:var(--serif);font-size:1.3rem;font-weight:400;color:var(--cream);margin-bottom:8px}
+.mc-desc{font-size:.82rem;font-weight:300;color:rgba(250,248,243,.55);line-height:1.7;margin-bottom:20px}
+.mc-footer{display:flex;align-items:center;justify-content:space-between}
+.mc-price{font-family:var(--serif);font-size:1.2rem;color:var(--gold)}
+.mc-tag{font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.15);color:rgba(250,248,243,.5)}
 
-    .btn-dark {
-      display: inline-flex;
-      align-items: center;
-      padding: 14px 36px;
-      background: var(--espresso);
-      color: var(--cream);
-      font-size: .75rem;
-      font-weight: 500;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      border: 1px solid var(--espresso);
-      transition: all .3s;
-    }
-    .btn-dark:hover { background: transparent; color: var(--espresso); }
+/* ── GALLERY ─────────────────────────────────────────── */
+#galeria{background:var(--cream)}
+.gallery-header{
+  max-width:1200px;margin:0 auto 40px;
+  display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:20px;
+}
+.gallery-filters{display:flex;gap:8px;flex-wrap:wrap}
+.filter-btn{
+  padding:7px 18px;
+  border-radius:40px;
+  border:1px solid rgba(45,31,20,.2);
+  color:rgba(45,31,20,.7);
+  font-size:.72rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  transition:all .25s;
+}
+.filter-btn:hover,.filter-btn.active{
+  background:var(--espresso);
+  border-color:var(--espresso);
+  color:var(--cream);
+}
+.gallery-grid{
+  max-width:1200px;margin:0 auto;
+  columns:3 260px;gap:12px;
+}
+.gallery-item{
+  break-inside:avoid;
+  margin-bottom:12px;
+  cursor:pointer;
+  overflow:hidden;
+  border-radius:4px;
+  position:relative;
+  background:var(--sage);
+}
+.gallery-item img{
+  width:100%;display:block;
+  transition:transform .6s var(--ease);
+}
+.gallery-item:hover img{transform:scale(1.05)}
+.gallery-item.hidden{display:none}
+.gallery-overlay{
+  position:absolute;inset:0;
+  background:rgba(45,31,20,.5);
+  opacity:0;transition:opacity .3s;
+  display:flex;align-items:center;justify-content:center;
+}
+.gallery-overlay svg{width:32px;color:var(--white)}
+.gallery-item:hover .gallery-overlay{opacity:1}
 
-    .btn-outline {
-      display: inline-flex;
-      align-items: center;
-      padding: 14px 36px;
-      background: transparent;
-      color: var(--espresso);
-      font-size: .75rem;
-      font-weight: 500;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      border: 1px solid rgba(61, 46, 34, .4);
-      transition: all .3s;
-    }
-    .btn-outline:hover { border-color: var(--espresso); background: rgba(61,46,34,.06); }
+/* LIGHTBOX */
+#lightbox{
+  position:fixed;inset:0;z-index:2000;
+  background:rgba(45,31,20,.96);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;visibility:hidden;transition:opacity .3s;
+}
+#lightbox.open{opacity:1;visibility:visible}
+.lb-img{max-width:90vw;max-height:88vh;border-radius:4px;object-fit:contain}
+.lb-close,.lb-prev,.lb-next{
+  position:absolute;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.15);
+  color:var(--white);
+  border-radius:50%;
+  width:48px;height:48px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.4rem;cursor:pointer;
+  transition:background .2s;
+}
+.lb-close:hover,.lb-prev:hover,.lb-next:hover{background:rgba(255,255,255,.18)}
+.lb-close{top:24px;right:24px}
+.lb-prev{left:24px;top:50%;transform:translateY(-50%)}
+.lb-next{right:24px;top:50%;transform:translateY(-50%)}
+@media(max-width:640px){.lb-prev,.lb-next{display:none}}
 
-    .hero-scroll {
-      position: absolute;
-      bottom: 36px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 2;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      opacity: 1;
-      animation: fadeUpIn .7s ease 1.4s forwards;
-    }
-    .hero-scroll span {
-      font-size: .6rem;
-      letter-spacing: .4em;
-      text-transform: uppercase;
-      color: rgba(61, 46, 34, .4);
-    }
-    .hero-scroll-line {
-      width: 1px;
-      height: 48px;
-      background: linear-gradient(to bottom, rgba(61,46,34,.35), transparent);
-    }
+/* ── CONTACT ─────────────────────────────────────────── */
+#contacto{background:var(--espresso2)}
+#contacto .section-title{color:var(--cream)}
+#contacto .section-lead{color:rgba(250,248,243,.65)}
+.contacto-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:clamp(40px,6vw,80px);
+  max-width:1200px;margin:0 auto;
+}
+.form-group{margin-bottom:20px;position:relative}
+.form-label{
+  display:block;font-size:.72rem;letter-spacing:.15em;text-transform:uppercase;
+  color:rgba(250,248,243,.5);margin-bottom:8px;
+}
+.form-input{
+  width:100%;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:4px;
+  padding:14px 16px;
+  color:var(--cream);
+  font-size:.9rem;
+  outline:none;
+  transition:border-color .3s,background .3s;
+}
+.form-input:focus{background:rgba(255,255,255,.08);border-color:var(--gold)}
+.form-input::placeholder{color:rgba(250,248,243,.3)}
+.form-input.error{border-color:var(--terra)}
+.form-error{font-size:.72rem;color:var(--terra);position:absolute;bottom:-18px;left:0;display:none}
+.form-error.show{display:block}
+textarea.form-input{resize:vertical;min-height:120px}
+select.form-input option{color:var(--espresso);background:var(--cream)}
+.btn-submit{
+  width:100%;padding:16px;
+  background:var(--gold);color:var(--espresso);
+  font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;font-weight:500;
+  border-radius:4px;transition:background .3s,transform .2s;margin-top:8px;
+  position:relative;overflow:hidden;
+}
+.btn-submit:hover{background:#d4b075;transform:translateY(-1px)}
+.btn-submit:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.contact-info{padding-top:8px}
+.ci-item{
+  display:flex;gap:16px;align-items:flex-start;
+  margin-bottom:32px;padding-bottom:32px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.ci-item:last-of-type{border:none;margin-bottom:0;padding-bottom:0}
+.ci-icon{
+  width:40px;height:40px;flex-shrink:0;
+  background:rgba(201,169,110,.12);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+}
+.ci-icon svg{width:16px;color:var(--gold)}
+.ci-label{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(250,248,243,.4);margin-bottom:4px}
+.ci-value{font-size:.95rem;color:var(--cream);line-height:1.7}
+.ci-value a{color:var(--gold);transition:color .2s}
+.ci-value a:hover{color:var(--terra)}
+#map{width:100%;height:280px;border-radius:4px;margin-top:32px;border:1px solid rgba(255,255,255,.08)}
+@media(max-width:768px){.contacto-grid{grid-template-columns:1fr}}
 
-    /* ── SECTION COMMONS ───────────────────────────── */
-    section { padding: 120px 48px; }
+/* ── NEWSLETTER ──────────────────────────────────────── */
+#newsletter{
+  background:var(--sage);
+  padding:clamp(48px,7vw,96px) clamp(24px,6vw,80px);
+  text-align:center;
+}
+.nl-title{font-family:var(--serif);font-size:clamp(1.8rem,4vw,3rem);font-weight:300;color:var(--white);margin-bottom:12px}
+.nl-sub{font-size:.9rem;font-weight:300;color:rgba(255,255,255,.75);margin-bottom:36px}
+.nl-form{
+  display:flex;max-width:480px;margin:0 auto;
+  border-radius:60px;overflow:hidden;
+  box-shadow:0 8px 32px rgba(45,31,20,.2);
+}
+.nl-input{flex:1;padding:16px 24px;background:var(--white);border:none;outline:none;font-size:.85rem;color:var(--espresso)}
+.nl-btn{
+  padding:16px 28px;background:var(--espresso);color:var(--cream);
+  font-size:.75rem;letter-spacing:.15em;text-transform:uppercase;font-weight:500;
+  transition:background .3s;white-space:nowrap;cursor:pointer;border:none;
+}
+.nl-btn:hover{background:var(--terra)}
 
-    .section-label {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      margin-bottom: 64px;
-    }
-    .section-label span { height: 1px; width: 40px; background: var(--sage); display: block; }
-    .section-label p {
-      font-size: .68rem;
-      font-weight: 500;
-      letter-spacing: .38em;
-      text-transform: uppercase;
-      color: var(--sage);
-    }
-    .section-label.center { justify-content: center; margin-bottom: 24px; }
+/* ── FOOTER ──────────────────────────────────────────── */
+footer{background:var(--espresso);color:var(--cream);padding:clamp(48px,7vw,80px) clamp(24px,6vw,80px) 32px}
+.footer-grid{
+  display:grid;grid-template-columns:2fr 1fr 1fr;
+  gap:clamp(32px,5vw,64px);margin-bottom:56px;
+  max-width:1200px;margin-left:auto;margin-right:auto;
+}
+.footer-tagline{font-size:.85rem;font-weight:300;color:rgba(250,248,243,.5);margin-top:12px;line-height:1.7;max-width:280px}
+.footer-socials{display:flex;gap:12px;margin-top:24px}
+.social-link{
+  width:38px;height:38px;border:1px solid rgba(255,255,255,.15);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;transition:border-color .3s,background .3s;
+}
+.social-link svg{width:16px;color:rgba(255,255,255,.6);transition:color .3s}
+.social-link:hover{border-color:var(--gold);background:rgba(201,169,110,.1)}
+.social-link:hover svg{color:var(--gold)}
+.footer-col h4{font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(250,248,243,.4);margin-bottom:20px}
+.footer-col ul li{margin-bottom:12px}
+.footer-col ul a{font-size:.88rem;color:rgba(250,248,243,.7);transition:color .3s}
+.footer-col ul a:hover{color:var(--gold)}
+.footer-bottom{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;
+  padding-top:28px;border-top:1px solid rgba(255,255,255,.08);
+  max-width:1200px;margin:0 auto;
+}
+.footer-copy{font-size:.75rem;color:rgba(250,248,243,.35);letter-spacing:.05em}
+.footer-made{font-size:.72rem;color:rgba(250,248,243,.25)}
+@media(max-width:768px){.footer-grid{grid-template-columns:1fr;gap:40px}}
 
-    .section-title {
-      font-family: 'Playfair Display', serif;
-      font-size: clamp(2.2rem, 5vw, 3.6rem);
-      font-weight: 400;
-      line-height: 1.05;
-      color: var(--espresso);
-    }
-    .section-subtitle {
-      font-family: 'Playfair Display', serif;
-      font-style: italic;
-      font-size: 1rem;
-      color: rgba(61, 46, 34, .5);
-      margin-top: 12px;
-    }
+/* ── WHATSAPP FAB ────────────────────────────────────── */
+#wa-fab{position:fixed;bottom:88px;right:24px;z-index:700}
+@media(min-width:769px){#wa-fab{bottom:32px}}
+.wa-main{
+  width:52px;height:52px;background:#25D366;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 20px rgba(37,211,102,.4);
+  transition:transform .2s;cursor:pointer;
+}
+.wa-main:hover{transform:scale(1.08)}
+.wa-main svg{width:26px;color:white}
+.wa-options{
+  position:absolute;bottom:64px;right:0;
+  display:flex;flex-direction:column;gap:8px;
+  opacity:0;visibility:hidden;transform:translateY(12px);
+  transition:all .3s var(--ease);
+}
+#wa-fab:hover .wa-options,.wa-options.open{opacity:1;visibility:visible;transform:none}
+.wa-option{
+  display:flex;align-items:center;gap:10px;
+  background:var(--espresso);color:var(--cream);
+  padding:10px 16px;border-radius:40px;font-size:.78rem;
+  white-space:nowrap;box-shadow:0 4px 16px rgba(45,31,20,.3);
+  transition:background .2s;
+}
+.wa-option:hover{background:var(--espresso2)}
 
-    /* ── ABOUT ─────────────────────────────────────── */
-    #nosotros { background: var(--cream); }
-    .about-grid {
-      max-width: 1240px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 96px;
-      align-items: center;
-    }
-    .about-subtitle {
-      font-size: .68rem;
-      font-weight: 500;
-      letter-spacing: .35em;
-      text-transform: uppercase;
-      color: var(--sage);
-      margin-bottom: 32px;
-      margin-top: 24px;
-    }
-    .about-body {
-      font-size: 1.05rem;
-      line-height: 1.85;
-      color: rgba(61, 46, 34, .7);
-      margin-bottom: 48px;
-    }
-    .about-stats {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 32px;
-      padding-top: 40px;
-      border-top: 1px solid var(--border);
-    }
-    .about-stat-num {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 2.4rem;
-      font-weight: 300;
-      color: var(--espresso);
-      margin-bottom: 4px;
-    }
-    .about-stat-label {
-      font-size: .63rem;
-      letter-spacing: .35em;
-      text-transform: uppercase;
-      color: var(--sage);
-    }
-    .about-image-wrap { position: relative; }
-                                    .about-badge {
-      position: absolute;
-      bottom: -24px; left: -24px;
-      z-index: 2;
-      background: var(--espresso);
-      color: var(--cream);
-      padding: 24px 28px;
-    }
-    .about-badge-num {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 2.8rem;
-      font-weight: 300;
-      line-height: 1;
-    }
-    .about-badge-label {
-      font-size: .6rem;
-      letter-spacing: .3em;
-      text-transform: uppercase;
-      color: var(--wood);
-      margin-top: 4px;
-    }
+/* ── MOBILE BOTTOM NAV ───────────────────────────────── */
+#bottom-nav{
+  display:none;position:fixed;bottom:0;left:0;right:0;z-index:700;
+  background:rgba(250,248,243,.96);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-top:1px solid rgba(45,31,20,.1);
+  padding:6px 0 calc(6px + env(safe-area-inset-bottom));
+}
+@media(max-width:768px){#bottom-nav{display:flex}}
+.bn-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:8px 0;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;
+  color:rgba(45,31,20,.5);transition:color .2s;
+}
+.bn-item svg{width:20px;transition:transform .2s}
+.bn-item.active,.bn-item:hover{color:var(--terra)}
+.bn-item.active svg{transform:scale(1.15)}
 
-    /* ── MENU ──────────────────────────────────────── */
-    #menu { background: var(--sand); }
-    .menu-inner { max-width: 1240px; margin: 0 auto; }
-    .menu-header { text-align: center; margin-bottom: 56px; }
+/* ── TOAST ───────────────────────────────────────────── */
+#toast-container{position:fixed;top:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{
+  background:var(--espresso);color:var(--cream);padding:14px 20px;
+  border-radius:8px;font-size:.85rem;display:flex;align-items:center;gap:10px;
+  box-shadow:0 8px 32px rgba(45,31,20,.25);transform:translateX(110%);
+  transition:transform .4s var(--ease-out);max-width:300px;
+}
+.toast.show{transform:none}
+.toast.success .toast-dot{background:#4caf50}
+.toast.error .toast-dot{background:var(--terra)}
+.toast.info .toast-dot{background:var(--gold)}
+.toast-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 
-    .menu-tabs {
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 56px;
-    }
-    .tab-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 24px;
-      font-size: .7rem;
-      font-weight: 500;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--espresso);
-      cursor: pointer;
-      transition: all .3s;
-      font-family: 'Inter', sans-serif;
-    }
-    .tab-btn.active { background: var(--espresso); color: var(--cream); border-color: var(--espresso); }
-    .tab-btn:hover:not(.active) { border-color: var(--sage); color: var(--sage); }
+/* ── RIPPLE ──────────────────────────────────────────── */
+.ripple-effect{
+  position:absolute;border-radius:50%;transform:scale(0);
+  animation:ripple .6s linear;background:rgba(255,255,255,.25);pointer-events:none;
+}
+@keyframes ripple{to{transform:scale(4);opacity:0}}
 
-    .menu-panel { display: none; }
-    .menu-panel.active {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 32px;
-    }
-    .menu-card {
-      background: var(--cream);
-      transition: box-shadow .3s, transform .3s;
-    }
-    .menu-card:hover {
-      box-shadow: 0 20px 40px rgba(61, 46, 34, .08);
-      transform: translateY(-4px);
-    }
-    .menu-card-img { aspect-ratio: 4/3; overflow: hidden; }
-    .menu-card-img img { transition: transform .7s ease; }
-    .menu-card:hover .menu-card-img img { transform: scale(1.06); }
-    .menu-card-body { padding: 24px; }
-    .menu-card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 12px;
-      margin-bottom: 10px;
-    }
-    .menu-card-name {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: var(--espresso);
-      line-height: 1.3;
-    }
-    .menu-card-price {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.2rem;
-      color: var(--wood);
-      white-space: nowrap;
-    }
-    .menu-card-desc {
-      font-size: .85rem;
-      line-height: 1.65;
-      color: rgba(61, 46, 34, .58);
-    }
-
-    /* ── PDF MENUS ─────────────────────────────────── */
-                                    
-        .pdf-card:hover .pdf-icon {
-      background: var(--espresso);
-      color: var(--cream);
-      border-color: var(--espresso);
-    }
-            .pdf-card:hover .pdf-cta { color: var(--espresso); }
-
-    .menu-footer { text-align: center; margin-top: 56px; }
-    .menu-note {
-      font-family: 'Playfair Display', serif;
-      font-style: italic;
-      font-size: .9rem;
-      color: rgba(61, 46, 34, .4);
-      margin-bottom: 24px;
-    }
-    .btn-espresso {
-      display: inline-flex;
-      padding: 14px 36px;
-      background: var(--espresso);
-      color: var(--cream);
-      font-size: .75rem;
-      font-weight: 500;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      border: 1px solid var(--espresso);
-      transition: all .3s;
-    }
-    .btn-espresso:hover { background: transparent; color: var(--espresso); }
-
-    /* ── GALLERY ───────────────────────────────────── */
-    #galeria { background: var(--parchment); }
-    .gallery-inner { max-width: 1240px; margin: 0 auto; }
-    .gallery-header { text-align: center; margin-bottom: 64px; }
-    .gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-    }
-    .gallery-item { overflow: hidden; cursor: pointer; }
-    .gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .7s ease; }
-    .gallery-item:hover img { transform: scale(1.06); }
-    .gallery-item.tall { grid-row: span 2; }
-    .gallery-item .img-box { width: 100%; height: 220px; }
-    .gallery-item.tall .img-box { height: 460px; }
-
-    .gallery-quote {
-      text-align: center;
-      max-width: 640px;
-      margin: 80px auto 0;
-    }
-    .gallery-quote mark {
-      font-family: 'Playfair Display', serif;
-      font-size: 3.5rem;
-      color: var(--wood);
-      background: none;
-      line-height: .7;
-      display: block;
-    }
-    .gallery-quote p {
-      font-family: 'Playfair Display', serif;
-      font-style: italic;
-      font-size: 1.4rem;
-      color: var(--espresso);
-      line-height: 1.5;
-      margin-top: -12px;
-    }
-    .gallery-quote hr {
-      width: 60px;
-      border: none;
-      border-top: 1px solid var(--wood);
-      margin: 28px auto 0;
-    }
-
-    /* ── CONTACT ───────────────────────────────────── */
-    #contacto { background: var(--espresso); padding: 120px 48px; }
-    .contact-inner { max-width: 1240px; margin: 0 auto; }
-    .contact-header { text-align: center; margin-bottom: 80px; }
-    .contact-header .section-label p { color: var(--wood); }
-    .contact-header .section-label span { background: var(--wood); }
-    .contact-header .section-title { color: var(--cream); }
-
-    .contact-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 80px;
-    }
-    .contact-info-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 1rem;
-      color: var(--wood);
-      margin-bottom: 24px;
-    }
-    .contact-link {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      color: rgba(253, 252, 249, .68);
-      font-size: .9rem;
-      margin-bottom: 16px;
-      transition: color .3s;
-    }
-    .contact-link:hover { color: var(--wood); }
-    .contact-icon {
-      width: 40px; height: 40px;
-      border: 1px solid rgba(200, 168, 126, .28);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1rem;
-      color: var(--wood);
-      flex-shrink: 0;
-      transition: border-color .3s;
-    }
-    .contact-link:hover .contact-icon { border-color: var(--wood); }
-
-    .branch { margin-top: 40px; }
-    .branch-name {
-      font-family: 'Playfair Display', serif;
-      font-size: 1rem;
-      color: var(--cream);
-      margin-bottom: 4px;
-    }
-    .branch-addr { font-size: .85rem; color: rgba(253,252,249,.48); margin-bottom: 16px; }
-    .branch-map {
-      height: 160px; border: 0; width: 100%;
-      filter: grayscale(20%) contrast(1.1) brightness(0.9);
-    }
-
-    .contact-form-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 1rem;
-      color: var(--wood);
-      margin-bottom: 32px;
-    }
-    .form-field { margin-bottom: 28px; }
-    .form-label {
-      display: block;
-      font-size: .63rem;
-      letter-spacing: .35em;
-      text-transform: uppercase;
-      color: rgba(253,252,249,.38);
-      margin-bottom: 10px;
-    }
-    .form-input {
-      width: 100%;
-      background: transparent;
-      border: none;
-      border-bottom: 1px solid rgba(253,252,249,.16);
-      color: var(--cream);
-      font-family: 'Inter', sans-serif;
-      font-size: .9rem;
-      padding: 10px 0;
-      outline: none;
-      transition: border-color .3s;
-    }
-    .form-input::placeholder { color: rgba(253,252,249,.22); }
-    .form-input:focus { border-bottom-color: var(--wood); }
-    textarea.form-input { resize: none; height: 90px; }
-    .form-submit {
-      width: 100%;
-      padding: 16px;
-      background: var(--wood);
-      color: var(--espresso);
-      font-family: 'Inter', sans-serif;
-      font-size: .75rem;
-      font-weight: 500;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      border: none;
-      cursor: pointer;
-      transition: background .3s;
-    }
-    .form-submit:hover { background: var(--warm); }
-
-    /* ── FOOTER ─────────────────────────────────────── */
-    footer { background: var(--dark); color: rgba(253,252,249,.48); padding: 64px 48px 32px; }
-    .footer-inner { max-width: 1240px; margin: 0 auto; }
-    .footer-grid {
-      display: grid;
-      grid-template-columns: 1.4fr 1fr 1fr;
-      gap: 64px;
-      margin-bottom: 48px;
-    }
-    .footer-brand-name {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.8rem;
-      font-weight: 400;
-      color: var(--cream);
-      margin-bottom: 16px;
-    }
-    .footer-brand-desc { font-size: .85rem; line-height: 1.7; margin-bottom: 24px; }
-    .footer-socials { display: flex; gap: 10px; }
-    .footer-social {
-      width: 36px; height: 36px;
-      border: 1px solid rgba(253,252,249,.16);
-      display: flex; align-items: center; justify-content: center;
-      font-size: .7rem; font-weight: 600;
-      color: rgba(253,252,249,.48);
-      transition: all .3s;
-    }
-    .footer-social:hover { border-color: var(--wood); color: var(--wood); }
-    .footer-col-title {
-      font-size: .63rem; font-weight: 500;
-      letter-spacing: .35em; text-transform: uppercase;
-      color: var(--cream); margin-bottom: 20px;
-    }
-    .footer-branch-name { font-size: .85rem; color: var(--wood); margin-bottom: 4px; }
-    .footer-branch-addr { font-size: .82rem; margin-bottom: 24px; line-height: 1.6; }
-    .footer-contact-item {
-      display: block; font-size: .85rem;
-      color: rgba(253,252,249,.48); margin-bottom: 10px; transition: color .3s;
-    }
-    .footer-contact-item:hover { color: var(--wood); }
-    .footer-nav-link {
-      display: block; font-size: .82rem;
-      color: rgba(253,252,249,.48); margin-bottom: 10px; transition: color .3s;
-    }
-    .footer-nav-link:hover { color: var(--wood); }
-    .footer-bottom {
-      border-top: 1px solid rgba(253,252,249,.07);
-      padding-top: 28px;
-      display: flex; justify-content: space-between; align-items: center;
-      font-size: .75rem;
-    }
-    .footer-admin-link { color: rgba(253,252,249,.18); transition: color .3s; }
-    .footer-admin-link:hover { color: rgba(253,252,249,.48); }
-
-    /* ── LIGHTBOX ───────────────────────────────────── */
-    #lightbox {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(36,26,16,.94);
-      z-index: 200;
-      align-items: center; justify-content: center;
-      padding: 24px;
-    }
-    #lightbox.open { display: flex; }
-    #lightbox img { max-height: 88vh; max-width: 100%; object-fit: contain; width: auto; height: auto; }
-    #lightbox-close {
-      position: absolute; top: 20px; right: 24px;
-      background: rgba(253,252,249,.12); border: none;
-      color: var(--cream); font-size: 1.4rem;
-      width: 44px; height: 44px; border-radius: 50%;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-    }
-
-    /* ── RESPONSIVE ─────────────────────────────────── */
-    @media (max-width: 1024px) {
-      .about-grid { grid-template-columns: 1fr; gap: 64px; }
-      .about-image-wrap { order: -1; max-width: 560px; margin: 0 auto; }
-      .contact-grid { grid-template-columns: 1fr; gap: 56px; }
-      .menu-panel.active { grid-template-columns: repeat(2, 1fr); }
-      .pdf-grid { grid-template-columns: repeat(2, 1fr); }
-      .footer-grid { grid-template-columns: 1fr 1fr; }
-    }
-    @media (max-width: 768px) {
-      section { padding: 80px 24px; }
-      nav { padding: 20px 24px; }
-      nav.scrolled { padding: 12px 24px; }
-      .nav-links { display: none; }
-      .hero-title { font-size: clamp(3.5rem, 18vw, 6rem); }
-      .menu-panel.active { grid-template-columns: 1fr; }
-      .pdf-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
-      .gallery-grid { grid-template-columns: repeat(2, 1fr); }
-      .gallery-item.tall { grid-row: span 1; }
-      .gallery-item.tall .img-box { height: 220px; }
-      footer { padding: 48px 24px 24px; }
-      .footer-grid { grid-template-columns: 1fr; gap: 40px; }
-      .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
-      #cursor { display: none; }
-    }
-    @media (max-width: 480px) {
-      .pdf-grid { grid-template-columns: 1fr; }
-    }
-
-
-
-
-
-    /* ── ABOUT CARD EFFECT ──────────────────────────── */
-    .about-image-wrap {
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .about-card {
-      width: 380px;
-      height: 480px;
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid #C8B89A;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-      position: relative;
-      cursor: pointer;
-      will-change: transform;
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    .about-card img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-      clip-path: none;
-      border-radius: 0;
-    }
-    .about-card-shine {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      background: linear-gradient(105deg, rgba(255,255,255,0) 40%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0) 60%);
-      background-size: 300% 300%;
-      background-position: 50% 50%;
-      opacity: 0;
-      transition: opacity 0.5s ease;
-    }
-    /* ── WHATSAPP + DELIVERY NOTE ──────────────────── */
-    .wa-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 10px;
-      padding: 8px 14px;
-      background: #25D366;
-      color: #fff;
-      border-radius: 8px;
-      font-size: 0.78rem;
-      font-weight: 500;
-      letter-spacing: 0.02em;
-      text-decoration: none;
-      transition: background 0.2s ease;
-      line-height: 1;
-    }
-    .wa-btn:hover { background: #1aab50; }
-    .wa-icon { width: 15px; height: 15px; flex-shrink: 0; }
-    .delivery-note {
-      margin-top: 32px;
-      font-size: 0.75rem;
-      color: rgba(253,252,249,0.45);
-      line-height: 1.6;
-    }
-    .delivery-note strong { color: rgba(253,252,249,0.7); font-weight: 600; }
-    /* ── PDF MENU CARDS v2 ─────────────────────────── */
-    .pdf-section { margin-top: 64px; }
-    .pdf-section-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.6rem;
-      color: var(--espresso);
-      text-align: center;
-      margin-bottom: 8px;
-    }
-    .pdf-section-sub {
-      font-size: 0.85rem;
-      color: var(--wood);
-      text-align: center;
-      letter-spacing: .05em;
-      margin-bottom: 36px;
-    }
-    .pdf-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 24px;
-    }
-    .pdf-card-v2 {
-      display: block;
-      text-decoration: none;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.1);
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-      background: #FAF7F2;
-    }
-    .pdf-card-v2:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 16px 40px rgba(0,0,0,0.15);
-    }
-    .pdf-card-img {
-      width: 100%;
-      overflow: hidden;
-    }
-    .pdf-card-img img {
-      width: 100%;
-      height: auto;
-      display: block;
-    }
-    .pdf-card-v2:hover .pdf-card-img img { transform: none; }
-    .pdf-card-info {
-      background: #FAF7F2;
-      padding: 16px;
-      text-align: center;
-    }
-    .pdf-card-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.05rem;
-      color: #3D2B1F;
-      margin-bottom: 4px;
-    }
-    .pdf-card-cta {
-      font-size: 0.78rem;
-      color: #C8B89A;
-      letter-spacing: .05em;
-    }
-    @media (max-width: 640px) {
-      .pdf-grid { grid-template-columns: 1fr; }
-    }
-  
-    /* reveal/stagger: elements start visible, animations are progressive enhancement */
-  </style>
+/* ── CONFETTI ────────────────────────────────────────── */
+.confetti-piece{
+  position:fixed;pointer-events:none;z-index:9990;
+  animation:confettiFall linear forwards;
+}
+@keyframes confettiFall{
+  0%{transform:translateY(-10vh) rotate(0deg);opacity:1}
+  100%{transform:translateY(110vh) rotate(720deg);opacity:0}
+}
+</style>
 </head>
 <body>
 
-<div id="cursor"></div>
+<!-- LOADER -->
+<div id="loader">
+  <p class="loader-word">Gratitude</p>
+  <div class="loader-line"></div>
+</div>
 
-<!-- ── NAVBAR ─────────────────────────────────────── -->
-<nav id="navbar">
+<!-- CURSOR -->
+<div id="cursor"></div>
+<div id="cursor-dot"></div>
+
+<!-- TOAST -->
+<div id="toast-container" aria-live="polite"></div>
+
+<!-- NAVBAR -->
+<nav id="nav" aria-label="Navegación principal">
   <a href="#hero" class="nav-logo">Gratitude</a>
-  <ul class="nav-links">
-    <li><a href="#nosotros">Nosotros</a></li>
-    <li><a href="#menu">Menú</a></li>
-    <li><a href="#galeria">Galería</a></li>
-    <li><a href="#contacto">Contacto</a></li>
-    <li><a href="#contacto" class="nav-cta">Reservar</a></li>
-  </ul>
+  <div class="nav-links">
+    <a href="#nosotros">Nosotros</a>
+    <a href="#menu">Menú</a>
+    <a href="#galeria">Galería</a>
+    <a href="#contacto">Contacto</a>
+  </div>
+  <a href="#contacto" class="nav-reserve">Reservar</a>
+  <div class="nav-hamburger" id="hamburger" role="button" tabindex="0" aria-label="Abrir menú">
+    <span></span><span></span><span></span>
+  </div>
 </nav>
 
-<!-- ── HERO ───────────────────────────────────────── -->
+<!-- MOBILE MENU -->
+<div id="mobile-menu" role="dialog" aria-label="Menú de navegación">
+  <button class="close-btn" id="mobile-close" aria-label="Cerrar">✕</button>
+  <a href="#nosotros" class="mobile-link">Nosotros</a>
+  <a href="#menu" class="mobile-link">Menú</a>
+  <a href="#galeria" class="mobile-link">Galería</a>
+  <a href="#contacto" class="mobile-link">Contacto</a>
+</div>
+
+<!-- HERO -->
 <section id="hero">
-  <div class="hero-img">
-    <img id="hero-bg" src="/hero-gratitude.jpg" alt="Interior de Gratitude" />
-  </div>
+  <div class="hero-bg" id="hero-bg"></div>
   <div class="hero-overlay"></div>
-  <div class="hero-content" id="hero-content">
-    <p class="hero-eyebrow">Buenos Aires · Argentina</p>
-    <h1 class="hero-title">Gratitude</h1>
-    <div class="hero-divider">
-      <span></span><i>✦</i><span></span>
-    </div>
-    <p class="hero-tagline" id="hero-tagline"></p>
+  <div class="hero-content">
+    <p class="hero-tag">Buenos Aires · Palermo · Victoria</p>
+    <h1 class="hero-title">Cocina con <em>alma</em><br>y propósito</h1>
+    <p class="hero-sub">Ingredientes frescos, recetas honestas, momentos que perduran</p>
     <div class="hero-ctas">
-      <a href="#menu" class="btn-dark">Ver Menú</a>
-      <a href="#contacto" class="btn-outline">Reservar Mesa</a>
+      <a href="#menu" class="btn-primary">Ver nuestra carta</a>
+      <a href="#contacto" class="btn-outline">Reservar mesa</a>
     </div>
   </div>
-  <div class="hero-scroll">
-    <span>Scroll</span>
-    <div class="hero-scroll-line"></div>
+  <div class="hero-scroll" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+    <span>Explorar</span>
   </div>
 </section>
 
-<!-- ── NOSOTROS ──────────────────────────────────── -->
+<!-- MARQUEE -->
+<div class="marquee-strip" aria-hidden="true">
+  <div class="marquee-inner">
+    <span class="marquee-item">Desayunos</span>
+    <span class="marquee-item">Almuerzos</span>
+    <span class="marquee-item">Meriendas</span>
+    <span class="marquee-item">Cenas</span>
+    <span class="marquee-item">Coctelería</span>
+    <span class="marquee-item">Postres</span>
+    <span class="marquee-item">Ingredientes locales</span>
+    <span class="marquee-item">Temporada</span>
+    <span class="marquee-item">Desayunos</span>
+    <span class="marquee-item">Almuerzos</span>
+    <span class="marquee-item">Meriendas</span>
+    <span class="marquee-item">Cenas</span>
+    <span class="marquee-item">Coctelería</span>
+    <span class="marquee-item">Postres</span>
+    <span class="marquee-item">Ingredientes locales</span>
+    <span class="marquee-item">Temporada</span>
+  </div>
+</div>
+
+<!-- NOSOTROS -->
 <section id="nosotros">
-  <div class="about-grid">
-    <div class="about-text">
-      <div class="section-label reveal">
-        <span></span><p>Sobre Nosotros</p>
-      </div>
-      <h2 class="section-title reveal">Un lugar que nació del amor por lo auténtico</h2>
-      <p class="about-subtitle reveal">Ingredientes de estación · Cocina de autor · Café de especialidad</p>
-      <p class="about-body reveal">
-        Gratitude es más que un restaurante. Es un espacio donde cada plato cuenta una historia de ingredientes elegidos con cuidado, preparaciones artesanales y el calor de quienes lo hacen posible. Nacimos en Palermo con la convicción de que comer bien es un acto de gratitud hacia uno mismo y hacia quienes nos rodean.
+  <div class="nosotros-grid">
+    <div class="nosotros-text reveal hidden left">
+      <span class="section-label">Nuestra historia</span>
+      <h2 class="section-title">Un espacio donde<br>el tiempo <em>se detiene</em></h2>
+      <div class="section-line"></div>
+      <p class="section-lead">
+        Gratitude nació de un deseo simple: crear el lugar que siempre quisimos encontrar. Un café que fuera también restaurante, con la calidez de lo cotidiano y la precisión de lo excepcional. Cada plato es una conversación entre el territorio y la técnica.
       </p>
-      <div class="about-stats">
-        <div class="stagger-item">
-          <div class="about-stat-num">2015</div>
-          <div class="about-stat-label">Fundado</div>
+      <p class="section-lead" style="margin-top:20px">
+        Trabajamos con productores locales, elegimos ingredientes de temporada y cocinamos con la convicción de que la buena comida transforma el estado de ánimo.
+      </p>
+      <div class="counters stagger">
+        <div class="counter-item">
+          <div class="counter-num" data-target="7">0</div>
+          <div class="counter-label">Años</div>
         </div>
-        <div class="stagger-item">
-          <div class="about-stat-num">2</div>
-          <div class="about-stat-label">Sucursales</div>
+        <div class="counter-item">
+          <div class="counter-num" data-target="34">0</div>
+          <div class="counter-label">Productores</div>
         </div>
-        <div class="stagger-item">
-          <div class="about-stat-num">100%</div>
-          <div class="about-stat-label">Artesanal</div>
+        <div class="counter-item">
+          <div class="counter-num" data-target="2">0</div>
+          <div class="counter-label">Sedes</div>
         </div>
       </div>
     </div>
-
-    <div class="about-image-wrap reveal">
-      <div class="about-card" id="aboutCard">
-        <img src="/hero-gratitude.jpg" id="aboutRevealImg" alt="Gratitude — nuestro espacio" />
-        <div class="about-card-shine" id="aboutCardShine"></div>
-      </div>
-      <div class="about-badge">
-        <div class="about-badge-num">10+</div>
-        <div class="about-badge-label">Años de sabor</div>
+    <div class="nosotros-image reveal hidden right">
+      <img src="/hero-gratitude.jpg" alt="Interior de Gratitude" loading="lazy"
+           onerror="this.style.display='none'">
+      <div class="nosotros-image-badge">
+        <strong>2017</strong>
+        Abrimos nuestras<br>puertas en Palermo
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── MENÚ ──────────────────────────────────────── -->
+<!-- MARQUEE 2 -->
+<div class="marquee-strip" aria-hidden="true" style="background:var(--sage)">
+  <div class="marquee-inner" style="animation-direction:reverse;animation-duration:32s">
+    <span class="marquee-item" style="color:rgba(255,255,255,.85)">Masa madre</span>
+    <span class="marquee-item" style="color:rgba(255,255,255,.85)">Huevos de campo</span>
+    <span class="marquee-item" style="color:rgba(255,255,255,.85)">Café de especialidad</span>
+    <span class="marquee-item" style="color:rgba(255,255,255,.85)">Sin aditivos</span>
+    <span class="marquee-item" style="color:rgba(255,255,255,.85)">Cocina a la vista</span>
+    <span class="marquee-item" style="color:rgba(255,255,255,.85)">Vinos naturales</span>
+    <span class="marquee-item" style="color:rgba(255,255,255,.85)">Masa madre</span>
+    <span class="marquee-item" style="color:rgba(255,255,255,.85)">Huevos de campo</span>
+    <span class="marquee-item" style="color:rgba(255,255,255,.85)">Café de especialidad</span>
+    <span class="marquee-item" style="color:rgba(255,255,255,.85)">Sin aditivos</span>
+    <span class="marquee-item" style="color:rgba(255,255,255,.85)">Cocina a la vista</span>
+    <span class="marquee-item" style="color:rgba(255,255,255,.85)">Vinos naturales</span>
+  </div>
+</div>
+
+<!-- MENÚ -->
 <section id="menu">
-  <div class="menu-inner">
-    <div class="menu-header">
-      <div class="section-label center reveal">
-        <span></span><p>Destacados</p><span></span>
-      </div>
-      <h2 class="section-title reveal">Lo que nos gusta cocinar</h2>
-      <p class="section-subtitle reveal">Una muestra de lo que encontrás en nuestros locales — el menú completo está en PDF</p>
+  <div class="menu-header reveal hidden">
+    <div>
+      <span class="section-label" style="color:var(--terra)">Lo que nos gusta cocinar</span>
+      <h2 class="section-title" style="color:var(--cream)">Nuestra <em style="color:var(--gold)">carta</em></h2>
+      <div class="section-line" style="background:var(--gold)"></div>
     </div>
-
-    <div class="menu-tabs reveal">
-      <button class="tab-btn active" data-tab="desayunos">☀ Desayunos</button>
-      <button class="tab-btn" data-tab="almuerzos">✦ Almuerzos</button>
-      <button class="tab-btn" data-tab="cafe">◎ Café</button>
-      <button class="tab-btn" data-tab="postres">◇ Postres</button>
+    <div class="menu-search-wrap">
+      <svg class="menu-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(250,248,243,.5)" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="search" class="menu-search" id="menu-search" placeholder="Buscar plato..." autocomplete="off" aria-label="Buscar en el menú">
+      <div class="search-dropdown" id="search-dropdown"></div>
     </div>
-
-    <div class="menu-panel active" data-panel="desayunos">
-      <div class="menu-card">
-        <div class="menu-card-img"><img src="https://images.unsplash.com/photo-1603046891726-36bfd957e0bf?w=800&q=80" alt="Tostadas Gratitude" /></div>
-        <div class="menu-card-body">
-          <div class="menu-card-header"><div class="menu-card-name">Tostadas Gratitude</div></div>
-          <p class="menu-card-desc">Pan de masa madre, palta, huevo pochado y semillas tostadas</p>
-        </div>
-      </div>
-      <div class="menu-card">
-        <div class="menu-card-img"><img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80" alt="Bowl de Granola" /></div>
-        <div class="menu-card-body">
-          <div class="menu-card-header"><div class="menu-card-name">Bowl de Granola</div></div>
-          <p class="menu-card-desc">Granola artesanal, yogur griego, frutas de estación y miel de colmena</p>
-        </div>
-      </div>
-      <div class="menu-card">
-        <div class="menu-card-img"><img src="https://images.unsplash.com/photo-1603046891726-36bfd957e0bf?w=800&q=80" alt="Pancakes de Avena" /></div>
-        <div class="menu-card-body">
-          <div class="menu-card-header"><div class="menu-card-name">Pancakes de Avena</div></div>
-          <p class="menu-card-desc">Pancakes esponjosos con syrup de arce, berries y mantequilla de nuez</p>
-        </div>
-      </div>
+  </div>
+  <div class="menu-cats" id="menu-cats">
+    <button class="cat-btn active" data-cat="all">Todos</button>
+    <button class="cat-btn" data-cat="desayuno">Desayunos</button>
+    <button class="cat-btn" data-cat="almuerzo">Almuerzos</button>
+    <button class="cat-btn" data-cat="merienda">Meriendas</button>
+    <button class="cat-btn" data-cat="cena">Cenas</button>
+    <button class="cat-btn" data-cat="bebida">Bebidas</button>
+    <button class="cat-btn" data-cat="postre">Postres</button>
+  </div>
+  <div class="menu-grid" id="menu-grid">
+    <!-- DESAYUNOS -->
+    <div class="menu-card reveal hidden" data-cat="desayuno">
+      <div class="mc-cat">Desayuno</div>
+      <div class="mc-name">Tostada de masa madre</div>
+      <div class="mc-desc">Con palta, huevo poché, semillas de sésamo y aceite de oliva virgen extra</div>
+      <div class="mc-footer"><span class="mc-price">$3.800</span><span class="mc-tag">Vegano</span></div>
     </div>
-
-    <div class="menu-panel" data-panel="almuerzos">
-      <div class="menu-card">
-        <div class="menu-card-img"><img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80" alt="Bowl Mediterráneo" /></div>
-        <div class="menu-card-body">
-          <div class="menu-card-header"><div class="menu-card-name">Bowl Mediterráneo</div></div>
-          <p class="menu-card-desc">Quinoa, falafel, pepino, tomate, tzatziki y aceitunas</p>
-        </div>
-      </div>
-      <div class="menu-card">
-        <div class="menu-card-img"><img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80" alt="Tarta de Hongos" /></div>
-        <div class="menu-card-body">
-          <div class="menu-card-header"><div class="menu-card-name">Tarta de Hongos</div></div>
-          <p class="menu-card-desc">Masa de mantequilla, crema de ricotta, hongos salteados y tomillo fresco</p>
-        </div>
-      </div>
-      <div class="menu-card">
-        <div class="menu-card-img"><img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80" alt="Salmón Gratitude" /></div>
-        <div class="menu-card-body">
-          <div class="menu-card-header"><div class="menu-card-name">Salmón Gratitude</div></div>
-          <p class="menu-card-desc">Salmón sellado, puré de batata, espinaca salteada y salsa de limón</p>
-        </div>
-      </div>
+    <div class="menu-card reveal hidden" data-cat="desayuno">
+      <div class="mc-cat">Desayuno</div>
+      <div class="mc-name">Bowl açaí</div>
+      <div class="mc-desc">Granola artesanal, frutas de estación, miel de colmena, coco rallado y semillas de chía</div>
+      <div class="mc-footer"><span class="mc-price">$4.200</span><span class="mc-tag">Vegano</span></div>
     </div>
-
-    <div class="menu-panel" data-panel="cafe">
-      <div class="menu-card">
-        <div class="menu-card-img"><img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80" alt="Flat White" /></div>
-        <div class="menu-card-body">
-          <div class="menu-card-header"><div class="menu-card-name">Flat White</div></div>
-          <p class="menu-card-desc">Doble espresso con leche vaporizada texturada. Granos de origen único</p>
-        </div>
-      </div>
-      <div class="menu-card">
-        <div class="menu-card-img"><img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80" alt="Cold Brew" /></div>
-        <div class="menu-card-body">
-          <div class="menu-card-header"><div class="menu-card-name">Cold Brew</div></div>
-          <p class="menu-card-desc">Infusión en frío por 18 horas, servido con hielo y leche de avena</p>
-        </div>
-      </div>
+    <div class="menu-card reveal hidden" data-cat="desayuno">
+      <div class="mc-cat">Desayuno</div>
+      <div class="mc-name">Pancakes de avena</div>
+      <div class="mc-desc">Miel de abeja de la Patagonia, manteca de almendras y frutos rojos frescos</div>
+      <div class="mc-footer"><span class="mc-price">$4.500</span><span class="mc-tag">Sin gluten</span></div>
     </div>
-
-    <div class="menu-panel" data-panel="postres">
-      <div class="menu-card">
-        <div class="menu-card-img"><img src="https://images.unsplash.com/photo-1551024506-0bccd828d307?w=800&q=80" alt="Cheesecake" /></div>
-        <div class="menu-card-body">
-          <div class="menu-card-header"><div class="menu-card-name">Cheesecake de Frutos Rojos</div></div>
-          <p class="menu-card-desc">Cheesecake horneado con coulis de frambuesa y crumble de avena</p>
-        </div>
-      </div>
-      <div class="menu-card">
-        <div class="menu-card-img"><img src="https://images.unsplash.com/photo-1551024506-0bccd828d307?w=800&q=80" alt="Brownie" /></div>
-        <div class="menu-card-body">
-          <div class="menu-card-header"><div class="menu-card-name">Brownie Gratitude</div></div>
-          <p class="menu-card-desc">Brownie de chocolate amargo 70%, helado de vainilla y nueces</p>
-        </div>
-      </div>
+    <div class="menu-card reveal hidden" data-cat="desayuno">
+      <div class="mc-cat">Desayuno</div>
+      <div class="mc-name">Croissant de manteca</div>
+      <div class="mc-desc">Jamón crudo, brie francés, rúcula y tomates cherry confitados. Horneado al momento</div>
+      <div class="mc-footer"><span class="mc-price">$3.600</span><span class="mc-tag">Clásico</span></div>
     </div>
-
-    <!-- PDF Downloads -->
-    <div class="pdf-section reveal">
-      <p class="pdf-section-title">Carta completa</p>
-      <p class="pdf-section-sub">Descargá o abrí nuestros menús en PDF</p>
-      <div class="pdf-grid">
-        <a href="LUNCH MENU.pdf" class="pdf-card-v2 stagger-item" target="_blank" rel="noopener">
-          <div class="pdf-card-img"><img src="/LUNCH%20MENU.jpg" alt="Lunch Menu" /></div>
-          <div class="pdf-card-info">
-            <p class="pdf-card-title">Lunch Menu</p>
-            <p class="pdf-card-cta">Ver menú →</p>
-          </div>
-        </a>
-        <a href="ALL DAY MENU.pdf" class="pdf-card-v2 stagger-item" target="_blank" rel="noopener">
-          <div class="pdf-card-img"><img src="/ALL%20DAY%20MENU.jpg" alt="All Day Menu" /></div>
-          <div class="pdf-card-info">
-            <p class="pdf-card-title">All Day Menu</p>
-            <p class="pdf-card-cta">Ver menú →</p>
-          </div>
-        </a>
-        <a href="MENU ALMUERZO.pdf" class="pdf-card-v2 stagger-item" target="_blank" rel="noopener">
-          <div class="pdf-card-img"><img src="/MENU%20ALMUERZO.jpg" alt="Menú Almuerzo" /></div>
-          <div class="pdf-card-info">
-            <p class="pdf-card-title">Menú Almuerzo</p>
-            <p class="pdf-card-cta">Ver menú →</p>
-          </div>
-        </a>
-        <a href="MENU TODO EL DIA.pdf" class="pdf-card-v2 stagger-item" target="_blank" rel="noopener">
-          <div class="pdf-card-img"><img src="/MENU%20TODO%20EL%20DIA.jpg" alt="Menú Todo el Día" /></div>
-          <div class="pdf-card-info">
-            <p class="pdf-card-title">Menú Todo el Día</p>
-            <p class="pdf-card-cta">Ver menú →</p>
-          </div>
-        </a>
-      </div>
+    <div class="menu-card reveal hidden" data-cat="desayuno">
+      <div class="mc-cat">Desayuno</div>
+      <div class="mc-name">Yogur griego artesanal</div>
+      <div class="mc-desc">Fruta fresca de temporada, granola de avena tostada, miel y semillas variadas</div>
+      <div class="mc-footer"><span class="mc-price">$3.200</span><span class="mc-tag">Ligero</span></div>
     </div>
-
-    <div class="menu-footer">
-      <a href="#contacto" class="btn-espresso">Reservar Mesa</a>
+    <!-- ALMUERZOS -->
+    <div class="menu-card reveal hidden" data-cat="almuerzo">
+      <div class="mc-cat">Almuerzo</div>
+      <div class="mc-name">Risotto de hongos silvestres</div>
+      <div class="mc-desc">Parmesano reggiano, aceite de trufa negra y hierbas frescas de nuestro jardín</div>
+      <div class="mc-footer"><span class="mc-price">$7.800</span><span class="mc-tag">Vegetariano</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="almuerzo">
+      <div class="mc-cat">Almuerzo</div>
+      <div class="mc-name">Pasta fresca al ragú</div>
+      <div class="mc-desc">Cordero de la Patagonia, tomates san marzano, albahaca fresca y parmesano</div>
+      <div class="mc-footer"><span class="mc-price">$7.200</span><span class="mc-tag">Del chef</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="almuerzo">
+      <div class="mc-cat">Almuerzo</div>
+      <div class="mc-name">Ensalada César renovada</div>
+      <div class="mc-desc">Pollo a la parrilla, lechuga romana, anchoas del cantábrico, crutones caseros</div>
+      <div class="mc-footer"><span class="mc-price">$5.900</span><span class="mc-tag">Clásico</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="almuerzo">
+      <div class="mc-cat">Almuerzo</div>
+      <div class="mc-name">Milanesa napolitana</div>
+      <div class="mc-desc">Ternera de primera, salsa artesanal, jamón y mozzarella. Papas rústicas al romero</div>
+      <div class="mc-footer"><span class="mc-price">$8.400</span><span class="mc-tag">Favorito</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="almuerzo">
+      <div class="mc-cat">Almuerzo</div>
+      <div class="mc-name">Bowl de quínoa vegano</div>
+      <div class="mc-desc">Garbanzos especiados, tahini de sésamo negro, vegetales asados y aderezo de limón</div>
+      <div class="mc-footer"><span class="mc-price">$6.300</span><span class="mc-tag">Vegano</span></div>
+    </div>
+    <!-- MERIENDAS -->
+    <div class="menu-card reveal hidden" data-cat="merienda">
+      <div class="mc-cat">Merienda</div>
+      <div class="mc-name">Scones caseros</div>
+      <div class="mc-desc">Clotted cream artesanal, mermelada de damascos orgánicos. Receta tradicional inglesa</div>
+      <div class="mc-footer"><span class="mc-price">$2.800</span><span class="mc-tag">Tradicional</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="merienda">
+      <div class="mc-cat">Merienda</div>
+      <div class="mc-name">Torta de zanahoria</div>
+      <div class="mc-desc">Frosting de queso crema, nuez pecán caramelizada y canela de Ceylán. Horneada diariamente</div>
+      <div class="mc-footer"><span class="mc-price">$3.100</span><span class="mc-tag">Sin gluten</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="merienda">
+      <div class="mc-cat">Merienda</div>
+      <div class="mc-name">Medialunas de manteca</div>
+      <div class="mc-desc">Recién horneadas, con dulce de leche artesanal o manteca y mermelada de fresa</div>
+      <div class="mc-footer"><span class="mc-price">$2.200</span><span class="mc-tag">Casero</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="merienda">
+      <div class="mc-cat">Merienda</div>
+      <div class="mc-name">Tostada francesa</div>
+      <div class="mc-desc">Brioche artesanal, dulce de leche repostero, banana caramelizada y crema chantilly</div>
+      <div class="mc-footer"><span class="mc-price">$3.400</span><span class="mc-tag">Dulce</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="merienda">
+      <div class="mc-cat">Merienda</div>
+      <div class="mc-name">Cheesecake de frutos rojos</div>
+      <div class="mc-desc">Base de galletitas, relleno de queso crema y vainilla de Tahití, coulis de frambuesa</div>
+      <div class="mc-footer"><span class="mc-price">$3.600</span><span class="mc-tag">Del día</span></div>
+    </div>
+    <!-- CENAS -->
+    <div class="menu-card reveal hidden" data-cat="cena">
+      <div class="mc-cat">Cena</div>
+      <div class="mc-name">Bife de chorizo</div>
+      <div class="mc-desc">Angus de feedlot, chimichurri de hierbas frescas, papas al romero y ensalada verde</div>
+      <div class="mc-footer"><span class="mc-price">$12.800</span><span class="mc-tag">Parrilla</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="cena">
+      <div class="mc-cat">Cena</div>
+      <div class="mc-name">Pulpo a la plancha</div>
+      <div class="mc-desc">Alioli de azafrán, páprika ahumada, papas confitadas y limón de Tucumán</div>
+      <div class="mc-footer"><span class="mc-price">$14.200</span><span class="mc-tag">Del mar</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="cena">
+      <div class="mc-cat">Cena</div>
+      <div class="mc-name">Ravioles de ricota</div>
+      <div class="mc-desc">Espinaca orgánica, salsa de nuez tostada, parmesano y hojas de salvia frita</div>
+      <div class="mc-footer"><span class="mc-price">$8.600</span><span class="mc-tag">Vegetariano</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="cena">
+      <div class="mc-cat">Cena</div>
+      <div class="mc-name">Salmón con costra de hierbas</div>
+      <div class="mc-desc">Ensalada tibia de lentejas verdes, yogur de hierbas y pepino, aceite de eneldo</div>
+      <div class="mc-footer"><span class="mc-price">$11.400</span><span class="mc-tag">Del mar</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="cena">
+      <div class="mc-cat">Cena</div>
+      <div class="mc-name">Cordero braseado</div>
+      <div class="mc-desc">12 horas de cocción lenta, vegetales de temporada, reducción de Malbec y gremolata</div>
+      <div class="mc-footer"><span class="mc-price">$13.600</span><span class="mc-tag">Lento</span></div>
+    </div>
+    <!-- BEBIDAS -->
+    <div class="menu-card reveal hidden" data-cat="bebida">
+      <div class="mc-cat">Bebida</div>
+      <div class="mc-name">Negroni Gratitude</div>
+      <div class="mc-desc">Gin artesanal porteño, vermut rojo, Campari, twist de naranja y hielo esculpido</div>
+      <div class="mc-footer"><span class="mc-price">$4.800</span><span class="mc-tag">Firma</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="bebida">
+      <div class="mc-cat">Bebida</div>
+      <div class="mc-name">Aperol Spritz clásico</div>
+      <div class="mc-desc">Aperol, Prosecco DOC, soda y rodaja de naranja fresca. El aperitivo perfecto</div>
+      <div class="mc-footer"><span class="mc-price">$4.200</span><span class="mc-tag">Clásico</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="bebida">
+      <div class="mc-cat">Bebida</div>
+      <div class="mc-name">Vino de autor</div>
+      <div class="mc-desc">Selección mensual de bodegas boutique argentinas. Consultar disponibilidad</div>
+      <div class="mc-footer"><span class="mc-price">$3.800</span><span class="mc-tag">Copa</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="bebida">
+      <div class="mc-cat">Bebida</div>
+      <div class="mc-name">Limonada de jengibre</div>
+      <div class="mc-desc">Limón de Tucumán, jengibre fresco, menta de jardín, agua mineral y azúcar de caña</div>
+      <div class="mc-footer"><span class="mc-price">$2.900</span><span class="mc-tag">Sin alcohol</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="bebida">
+      <div class="mc-cat">Bebida</div>
+      <div class="mc-name">Café de filtro de origen</div>
+      <div class="mc-desc">Método V60 o Chemex. Granos de especialidad de Etiopía, Colombia o Brasil</div>
+      <div class="mc-footer"><span class="mc-price">$2.100</span><span class="mc-tag">Especialidad</span></div>
+    </div>
+    <!-- POSTRES -->
+    <div class="menu-card reveal hidden" data-cat="postre">
+      <div class="mc-cat">Postre</div>
+      <div class="mc-name">Fondant de chocolate</div>
+      <div class="mc-desc">Valrhona 70%, centro líquido, helado de vainilla de Tahití y fleur de sel</div>
+      <div class="mc-footer"><span class="mc-price">$4.200</span><span class="mc-tag">Caliente</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="postre">
+      <div class="mc-cat">Postre</div>
+      <div class="mc-name">Tiramisú clásico</div>
+      <div class="mc-desc">Mascarpone artesanal, espresso doble, savoiardi, cacao amargo de Madagascar</div>
+      <div class="mc-footer"><span class="mc-price">$3.800</span><span class="mc-tag">Clásico</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="postre">
+      <div class="mc-cat">Postre</div>
+      <div class="mc-name">Crème brûlée de lavanda</div>
+      <div class="mc-desc">Crema de lavanda de Mendoza, azúcar de caña caramelizado al momento. Con fresas</div>
+      <div class="mc-footer"><span class="mc-price">$4.100</span><span class="mc-tag">Delicado</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="postre">
+      <div class="mc-cat">Postre</div>
+      <div class="mc-name">Pannacotta de maracuyá</div>
+      <div class="mc-desc">Gelatina de crema, coulis de maracuyá, ralladura de lima y flores comestibles</div>
+      <div class="mc-footer"><span class="mc-price">$3.600</span><span class="mc-tag">Frutal</span></div>
+    </div>
+    <div class="menu-card reveal hidden" data-cat="postre">
+      <div class="mc-cat">Postre</div>
+      <div class="mc-name">Tabla de quesos artesanales</div>
+      <div class="mc-desc">Selección de tres quesos locales, membrillo casero, nueces, uvas y panes de semillas</div>
+      <div class="mc-footer"><span class="mc-price">$6.200</span><span class="mc-tag">Para compartir</span></div>
     </div>
   </div>
 </section>
 
-<!-- ── GALERÍA ───────────────────────────────────── -->
+<!-- GALERÍA -->
 <section id="galeria">
-  <div class="gallery-inner">
-    <div class="gallery-header">
-      <div class="section-label center reveal">
-        <span></span><p>Galería</p><span></span>
-      </div>
-      <h2 class="section-title reveal">Galería</h2>
-      <p class="section-subtitle reveal">Momentos, sabores y espacios</p>
+  <div class="gallery-header reveal hidden">
+    <div>
+      <span class="section-label">Nuestros espacios</span>
+      <h2 class="section-title">Una <em>mirada</em><br>adentro</h2>
+      <div class="section-line"></div>
     </div>
-    <div class="gallery-grid">
-      <div class="gallery-item tall stagger-item" onclick="openLightbox(this)">
-        <div class="img-box"><img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80" alt="Café especial" /></div>
-      </div>
-      <div class="gallery-item stagger-item" onclick="openLightbox(this)">
-        <div class="img-box"><img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80" alt="Plato del día" /></div>
-      </div>
-      <div class="gallery-item stagger-item" onclick="openLightbox(this)">
-        <div class="img-box"><img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80" alt="Salmón" /></div>
-      </div>
-      <div class="gallery-item stagger-item" onclick="openLightbox(this)">
-        <div class="img-box"><img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80" alt="Pizza artesanal" /></div>
-      </div>
-      <div class="gallery-item tall stagger-item" onclick="openLightbox(this)">
-        <div class="img-box"><img src="https://images.unsplash.com/photo-1603046891726-36bfd957e0bf?w=800&q=80" alt="Hamburguesa gourmet" /></div>
-      </div>
-      <div class="gallery-item stagger-item" onclick="openLightbox(this)">
-        <div class="img-box"><img src="https://images.unsplash.com/photo-1603046891726-36bfd957e0bf?w=800&q=80" alt="Tostadas" /></div>
-      </div>
+    <div class="gallery-filters">
+      <button class="filter-btn active" data-filter="all">Todos</button>
+      <button class="filter-btn" data-filter="interior">Interior</button>
+      <button class="filter-btn" data-filter="platos">Platos</button>
+      <button class="filter-btn" data-filter="ambiente">Ambiente</button>
     </div>
-    <div class="gallery-quote reveal">
-      <mark>"</mark>
-      <p>Comer bien es una forma de agradecer a la vida.</p>
-      <hr />
+  </div>
+  <div class="gallery-grid" id="gallery-grid">
+    <div class="gallery-item" data-filter="interior" tabindex="0" role="button" aria-label="Ver imagen">
+      <img src="/hero-gratitude.jpg" alt="Interior Gratitude Palermo" loading="lazy" onerror="this.style.display='none'">
+      <div class="gallery-overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
+    </div>
+    <div class="gallery-item" data-filter="platos" tabindex="0" role="button" aria-label="Ver imagen" style="min-height:200px">
+      <img src="/hero-gratitude.jpg" alt="Platos de Gratitude" loading="lazy" onerror="this.style.display='none'">
+      <div class="gallery-overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
+    </div>
+    <div class="gallery-item" data-filter="ambiente" tabindex="0" role="button" aria-label="Ver imagen" style="min-height:280px">
+      <img src="/hero-gratitude.jpg" alt="Ambiente Gratitude" loading="lazy" onerror="this.style.display='none'">
+      <div class="gallery-overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
+    </div>
+    <div class="gallery-item" data-filter="interior" tabindex="0" role="button" aria-label="Ver imagen" style="min-height:320px">
+      <img src="/hero-gratitude.jpg" alt="Detalle interior" loading="lazy" onerror="this.style.display='none'">
+      <div class="gallery-overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
+    </div>
+    <div class="gallery-item" data-filter="platos" tabindex="0" role="button" aria-label="Ver imagen">
+      <img src="/hero-gratitude.jpg" alt="Desayuno artesanal" loading="lazy" onerror="this.style.display='none'">
+      <div class="gallery-overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
+    </div>
+    <div class="gallery-item" data-filter="ambiente" tabindex="0" role="button" aria-label="Ver imagen">
+      <img src="/hero-gratitude.jpg" alt="Terraza Gratitude" loading="lazy" onerror="this.style.display='none'">
+      <div class="gallery-overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
     </div>
   </div>
 </section>
 
-<!-- ── CONTACTO ──────────────────────────────────── -->
+<!-- LIGHTBOX -->
+<div id="lightbox" role="dialog" aria-label="Imagen ampliada">
+  <button class="lb-close" id="lb-close" aria-label="Cerrar">✕</button>
+  <button class="lb-prev" id="lb-prev" aria-label="Anterior">‹</button>
+  <img class="lb-img" id="lb-img" src="" alt="">
+  <button class="lb-next" id="lb-next" aria-label="Siguiente">›</button>
+</div>
+
+<!-- CONTACTO -->
 <section id="contacto">
-  <div class="contact-inner">
-    <div class="contact-header reveal">
-      <div class="section-label center">
-        <span></span><p>Contacto</p><span></span>
-      </div>
-      <h2 class="section-title">Encontranos</h2>
-    </div>
-    <div class="contact-grid">
-      <div class="reveal">
-        <p class="contact-info-title">Información de contacto</p>
-        <a href="tel:01148908683" class="contact-link">
-          <span class="contact-icon">☎</span>(011) 4890-8683
-        </a>
-        <a href="mailto:liligratitude@gmail.com.ar" class="contact-link">
-          <span class="contact-icon">✉</span>liligratitude@gmail.com.ar
-        </a>
-        <div style="margin-top:48px;">
-          <p class="contact-info-title">Nuestras sucursales</p>
-          <div class="branch">
-            <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:16px;">
-              <span class="contact-icon" style="flex-shrink:0;margin-top:2px;">◎</span>
-              <div>
-                <p class="branch-name">Palermo</p>
-                <p class="branch-addr">Av. Dorrego 1771<br>Palermo, Buenos Aires</p>
-              <a href="https://wa.me/5491170899214" class="wa-btn" target="_blank" rel="noopener noreferrer">
-                  <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                  Escribinos por WhatsApp
-                </a>
-              </div>
-            </div>
-            <iframe class="branch-map"
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3286.7!2d-58.4435!3d-34.5769!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x95bcb58405ea9717%3A0x86c6ac7151bd04ac!2sAv.%20Dorrego%201771%2C%20C1414CTS%20Cdad.%20Aut%C3%B3noma%20de%20Buenos%20Aires!5e0!3m2!1ses!2sar!4v1"
-              allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Palermo">
-            </iframe>
-          </div>
-          <div class="branch" style="margin-top:40px;">
-            <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:16px;">
-              <span class="contact-icon" style="flex-shrink:0;margin-top:2px;">◎</span>
-              <div>
-                <p class="branch-name">San Fernando</p>
-                <p class="branch-addr">Av. Libertador 3180<br>San Fernando, Buenos Aires</p>
-              <a href="https://wa.me/5491164452701" class="wa-btn" target="_blank" rel="noopener noreferrer">
-                  <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                  Escribinos por WhatsApp
-                </a>
-              </div>
-            </div>
-            <iframe class="branch-map"
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3287!2d-58.5560!3d-34.4459!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x95bc9b8c87c6e36b%3A0x0!2zMzTCsDI2JzQ1LjIiUyA1OMKwMzMnMjEuNiJX!5e0!3m2!1ses!2sar!4v1"
-              allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="San Fernando">
-            </iframe>
-          </div>
+  <div class="contacto-grid">
+    <div class="reveal hidden left">
+      <span class="section-label">Reservas &amp; contacto</span>
+      <h2 class="section-title" style="color:var(--cream)">Hacemos <em style="color:var(--gold)">lugar</em><br>para vos</h2>
+      <div class="section-line" style="background:var(--terra)"></div>
+      <form id="contact-form" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="cf-name">Nombre completo</label>
+          <input class="form-input" type="text" id="cf-name" name="name" placeholder="Tu nombre" required>
+          <span class="form-error" id="err-name">Por favor ingresá tu nombre</span>
         </div>
-        <p class="delivery-note">También podés hacer tu pedido por <strong>PedidosYa</strong> o <strong>Rappi</strong> 🛵</p>
+        <div class="form-group">
+          <label class="form-label" for="cf-email">Email</label>
+          <input class="form-input" type="email" id="cf-email" name="email" placeholder="tu@email.com" required>
+          <span class="form-error" id="err-email">Email inválido</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="cf-date">Fecha preferida</label>
+          <input class="form-input" type="date" id="cf-date" name="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="cf-guests">Personas</label>
+          <select class="form-input" id="cf-guests" name="guests">
+            <option value="">Seleccionar</option>
+            <option>1 persona</option>
+            <option>2 personas</option>
+            <option>3-4 personas</option>
+            <option>5-6 personas</option>
+            <option>7+ personas</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="cf-msg">Mensaje / pedidos especiales</label>
+          <textarea class="form-input" id="cf-msg" name="message" placeholder="Contanos qué necesitás..."></textarea>
+        </div>
+        <button type="submit" class="btn-submit" id="submit-btn">Enviar reserva</button>
+      </form>
+    </div>
+    <div class="contact-info reveal hidden right">
+      <div class="ci-item">
+        <div class="ci-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        </div>
+        <div>
+          <div class="ci-label">Palermo</div>
+          <div class="ci-value">Thames 1702, CABA<br>Lun–Dom · 8:00–23:00<br><a href="https://wa.me/5491170899214" target="_blank" rel="noopener">+54 9 11 7089-9214</a></div>
+        </div>
       </div>
-      <div class="reveal">
-        <p class="contact-form-title">Envianos un mensaje</p>
-        <form onsubmit="handleForm(event)">
-          <div class="form-field">
-            <label class="form-label">Nombre</label>
-            <input class="form-input" type="text" name="nombre" placeholder="Tu nombre" required />
-          </div>
-          <div class="form-field">
-            <label class="form-label">Email</label>
-            <input class="form-input" type="email" name="email" placeholder="tu@email.com" required />
-          </div>
-          <div class="form-field">
-            <label class="form-label">Mensaje</label>
-            <textarea class="form-input" name="mensaje" placeholder="¿En qué podemos ayudarte?" required></textarea>
-          </div>
-          <div id="form-ok" style="display:none;text-align:center;padding:32px 0;">
-            <p style="font-family:'Playfair Display',serif;font-size:2rem;color:var(--wood);margin-bottom:8px;">¡Gracias!</p>
-            <p style="font-size:.85rem;color:rgba(253,252,249,.6);">Te respondemos a la brevedad.</p>
-          </div>
-          <button type="submit" class="form-submit">Enviar Mensaje</button>
-        </form>
+      <div class="ci-item">
+        <div class="ci-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        </div>
+        <div>
+          <div class="ci-label">Victoria</div>
+          <div class="ci-value">San Martín 432, Victoria<br>Mar–Dom · 9:00–22:00<br><a href="https://wa.me/5491164452701" target="_blank" rel="noopener">+54 9 11 6445-2701</a></div>
+        </div>
       </div>
+      <div class="ci-item">
+        <div class="ci-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        </div>
+        <div>
+          <div class="ci-label">Email</div>
+          <div class="ci-value"><a href="mailto:hola@gratitude.com.ar">hola@gratitude.com.ar</a></div>
+        </div>
+      </div>
+      <div id="map"></div>
     </div>
   </div>
 </section>
 
-<!-- ── FOOTER ────────────────────────────────────── -->
-<footer>
-  <div class="footer-inner">
-    <div class="footer-grid">
-      <div>
-        <div class="footer-brand-name">Gratitude</div>
-        <p class="footer-brand-desc">Cocina honesta y artesanal en el corazón de Buenos Aires. Dos locales, un mismo espíritu.</p>
-        <div class="footer-socials">
-          <a href="#" class="footer-social" aria-label="Instagram">IG</a>
-          <a href="#" class="footer-social" aria-label="Facebook">FB</a>
-        </div>
-      </div>
-      <div>
-        <p class="footer-col-title">Sucursales</p>
-        <p class="footer-branch-name">Palermo</p>
-        <p class="footer-branch-addr">Av. Dorrego 1771<br>Buenos Aires, Argentina</p>
-        <p class="footer-branch-name">San Fernando</p>
-        <p class="footer-branch-addr">Av. Libertador 3180<br>Buenos Aires, Argentina</p>
-      </div>
-      <div>
-        <p class="footer-col-title">Contacto</p>
-        <a href="tel:01148908683" class="footer-contact-item">(011) 4890-8683</a>
-        <a href="mailto:liligratitude@gmail.com.ar" class="footer-contact-item">liligratitude@gmail.com.ar</a>
-        <br>
-        <p class="footer-col-title" style="margin-top:20px;">Navegación</p>
-        <a href="#nosotros" class="footer-nav-link">Nosotros</a>
-        <a href="#menu" class="footer-nav-link">Menú</a>
-        <a href="#galeria" class="footer-nav-link">Galería</a>
-        <a href="#contacto" class="footer-nav-link">Contacto</a>
+<!-- NEWSLETTER -->
+<section id="newsletter" class="reveal hidden">
+  <span class="section-label" style="color:rgba(255,255,255,.6);text-align:center;display:block">Novedades</span>
+  <h2 class="nl-title">Menú del mes, eventos<br>y mucho más</h2>
+  <p class="nl-sub">Recibí las novedades de Gratitude directo en tu bandeja</p>
+  <form class="nl-form" id="nl-form">
+    <input type="email" class="nl-input" id="nl-email" placeholder="tu@email.com" required>
+    <button type="submit" class="nl-btn">Suscribirme</button>
+  </form>
+</section>
+
+<!-- FOOTER -->
+<footer id="footer">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <span class="nav-logo" style="font-family:var(--serif);font-size:1.4rem;letter-spacing:.08em;color:var(--cream)">Gratitude</span>
+      <p class="footer-tagline">Restaurante &amp; Café en Palermo y Victoria. Cocina honesta, momentos auténticos.</p>
+      <div class="footer-socials">
+        <a href="https://instagram.com/gratitudebsas" class="social-link" target="_blank" rel="noopener" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r=".5" fill="currentColor"/></svg>
+        </a>
+        <a href="https://wa.me/5491170899214" class="social-link" target="_blank" rel="noopener" aria-label="WhatsApp">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </a>
       </div>
     </div>
-    <div class="footer-bottom">
-      <p>© 2025 Gratitude. Todos los derechos reservados.</p>
-      <a href="/admin" class="footer-admin-link">Acceso administrador</a>
+    <div class="footer-col">
+      <h4>Navegación</h4>
+      <ul>
+        <li><a href="#nosotros">Nosotros</a></li>
+        <li><a href="#menu">Menú</a></li>
+        <li><a href="#galeria">Galería</a></li>
+        <li><a href="#contacto">Reservas</a></li>
+      </ul>
     </div>
+    <div class="footer-col">
+      <h4>Horarios</h4>
+      <ul>
+        <li><a>Palermo: 8:00–23:00</a></li>
+        <li><a>Victoria: 9:00–22:00</a></li>
+        <li><a>Lun–Dom (Palermo)</a></li>
+        <li><a>Mar–Dom (Victoria)</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p class="footer-copy">© 2026 Gratitude Restaurante &amp; Café · Buenos Aires</p>
+    <p class="footer-made">Hecho con intención</p>
   </div>
 </footer>
 
-<!-- ── LIGHTBOX ──────────────────────────────────── -->
-<div id="lightbox" onclick="closeLightbox()">
-  <button id="lightbox-close" onclick="closeLightbox()">×</button>
-  <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()" />
+<!-- WHATSAPP FAB -->
+<div id="wa-fab">
+  <div class="wa-options" id="wa-options">
+    <a href="https://wa.me/5491170899214" class="wa-option" target="_blank" rel="noopener">
+      <svg width="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Palermo
+    </a>
+    <a href="https://wa.me/5491164452701" class="wa-option" target="_blank" rel="noopener">
+      <svg width="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Victoria
+    </a>
+  </div>
+  <div class="wa-main" id="wa-main" tabindex="0" role="button" aria-label="WhatsApp">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+  </div>
 </div>
 
+<!-- MOBILE BOTTOM NAV -->
+<nav id="bottom-nav" aria-label="Navegación inferior">
+  <a href="#hero" class="bn-item active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Inicio
+  </a>
+  <a href="#menu" class="bn-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+    Menú
+  </a>
+  <a href="#galeria" class="bn-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    Galería
+  </a>
+  <a href="#contacto" class="bn-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+    Reservas
+  </a>
+</nav>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  // ── Mobile: show all elements immediately (no scroll-based reveal) ──────
-  (function() {
-    var touch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0 ||
-                window.matchMedia('(hover: none)').matches;
-    if (touch) {
-      function forceVisible() {
-        document.querySelectorAll('.reveal, .stagger-item').forEach(function(el) {
-          el.classList.add('visible');
-          el.style.opacity = '1';
-          el.style.transform = 'none';
-        });
-      }
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', forceVisible);
-      } else {
-        forceVisible();
-      }
-    }
+(function(){
+'use strict';
+
+/* ── LOADER ─────────────────────────────────────────── */
+window.addEventListener('load', function(){
+  setTimeout(function(){ document.getElementById('loader').classList.add('done'); }, 1200);
+});
+
+/* ── CURSOR (desktop only) ───────────────────────────── */
+if(window.matchMedia('(hover:hover)').matches){
+  var cur = document.getElementById('cursor');
+  var dot = document.getElementById('cursor-dot');
+  var mx=0,my=0;
+  document.addEventListener('mousemove', function(e){ mx=e.clientX; my=e.clientY; });
+  (function animCursor(){
+    cur.style.left=mx+'px'; cur.style.top=my+'px';
+    dot.style.left=mx+'px'; dot.style.top=my+'px';
+    requestAnimationFrame(animCursor);
   })();
+  document.querySelectorAll('a,button,.menu-card,.gallery-item').forEach(function(el){
+    el.addEventListener('mouseenter',function(){ cur.classList.add('hovering'); });
+    el.addEventListener('mouseleave',function(){ cur.classList.remove('hovering'); });
+  });
+}
 
-  /* ── CUSTOM CURSOR ─────────────────────────────── */
-  const cursor = document.getElementById('cursor');
-  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-    document.body.classList.add('has-cursor');
-    let mx = 0, my = 0, cx = 0, cy = 0;
-    document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; cursor.classList.remove('hidden'); });
-    document.addEventListener('mouseleave', () => cursor.classList.add('hidden'));
-    (function loop() {
-      cx += (mx - cx) * 0.14; cy += (my - cy) * 0.14;
-      cursor.style.left = cx + 'px'; cursor.style.top = cy + 'px';
-      requestAnimationFrame(loop);
-    })();
-    document.querySelectorAll('a, button, .tab-btn, .gallery-item, .menu-card, .pdf-card').forEach(el => {
-      el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
-      el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
-    });
-  } else { cursor.style.display = 'none'; }
+/* ── NAVBAR ──────────────────────────────────────────── */
+var nav = document.getElementById('nav');
+function updateNav(){ nav.classList.toggle('scrolled', window.scrollY > 60); }
+window.addEventListener('scroll', updateNav, {passive:true});
+updateNav();
 
-  /* ── PARALLAX ──────────────────────────────────── */
-  const heroBg = document.getElementById('hero-bg');
-  const heroContent = document.getElementById('hero-content');
-  const heroSec = document.getElementById('hero');
-  const navbar = document.getElementById('navbar');
+/* ── MOBILE MENU ─────────────────────────────────────── */
+var mm = document.getElementById('mobile-menu');
+function openMM(){ mm.classList.add('open'); document.body.style.overflow='hidden'; }
+function closeMM(){ mm.classList.remove('open'); document.body.style.overflow=''; }
+document.getElementById('hamburger').addEventListener('click', openMM);
+document.getElementById('mobile-close').addEventListener('click', closeMM);
+document.querySelectorAll('.mobile-link').forEach(function(a){ a.addEventListener('click', closeMM); });
 
-  window.addEventListener('scroll', () => {
-    const sy = window.scrollY;
-    if (sy < heroSec.offsetHeight + 200) {
-      heroBg.style.transform = 'translateY(' + (sy * 0.38) + 'px)';
-      heroContent.style.transform = 'translateY(' + (sy * 0.14) + 'px)';
-    }
-    navbar.classList.toggle('scrolled', sy > 80);
-  }, { passive: true });
-
-  /* ── TYPEWRITER ────────────────────────────────── */
-  const tagEl = document.getElementById('hero-tagline');
-  const tagText = 'Cada plato, una razón para agradecer.';
-  let ti = 0;
-  function tw() {
-    tagEl.innerHTML = tagText.slice(0, ti) + (ti <= tagText.length ? '<span class="tw-cursor">|</span>' : '');
-    if (ti++ <= tagText.length) setTimeout(tw, 60);
-    else setTimeout(() => { const c = tagEl.querySelector('.tw-cursor'); if(c) c.style.display='none'; }, 2000);
+/* ── PARALLAX HERO ───────────────────────────────────── */
+var heroBg = document.getElementById('hero-bg');
+window.addEventListener('scroll', function(){
+  if(window.scrollY < window.innerHeight){
+    heroBg.style.transform = 'scale(1.08) translateY('+window.scrollY*0.3+'px)';
   }
-  setTimeout(tw, 1300);
+}, {passive:true});
 
-  /* ── SCROLL REVEAL: force all visible immediately ─ */
-  document.querySelectorAll('.reveal, .stagger-item, .fade-in, .animate').forEach(function(el) {
-    el.style.opacity = '1';
-    el.style.transform = 'none';
-    el.style.visibility = 'visible';
-    el.classList.add('visible');
+/* ── SCROLL REVEAL ───────────────────────────────────── */
+var revObs = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){
+      e.target.classList.remove('hidden');
+      revObs.unobserve(e.target);
+    }
   });
+},{threshold:0.1,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal.hidden').forEach(function(el){ revObs.observe(el); });
 
-  // Stagger items: all visible immediately
-  document.querySelectorAll('.stagger-item').forEach(function(el) {
-    el.style.opacity = '1';
-    el.style.transform = 'none';
-    el.classList.add('visible');
-  });
-  // Fallback: reveal all stagger items after 2.5s in case observer misfires
-  setTimeout(function() {
-    document.querySelectorAll('.stagger-item:not(.visible)').forEach(function(el) {
-      el.classList.add('visible');
-    });
-  }, 2500);
-
-  /* ── MENU TABS ─────────────────────────────────── */
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.menu-panel').forEach(p => p.classList.remove('active'));
-      btn.classList.add('active');
-      const panel = document.querySelector('[data-panel="' + btn.dataset.tab + '"]');
-      panel.classList.add('active');
-      panel.querySelectorAll('.menu-card').forEach((c, i) => {
-        ));
-        }
+/* ── STAGGER ─────────────────────────────────────────── */
+document.querySelectorAll('.stagger').forEach(function(parent){
+  var obs = new IntersectionObserver(function(entries){
+    if(entries[0].isIntersecting){
+      Array.from(parent.children).forEach(function(child, i){
+        setTimeout(function(){
+          child.style.opacity='1'; child.style.transform='none';
+        }, i*120);
       });
-    });
+      obs.unobserve(parent);
+    }
+  },{threshold:0.15});
+  obs.observe(parent);
+});
+
+/* ── ANIMATED COUNTERS ───────────────────────────────── */
+document.querySelectorAll('.counter-num[data-target]').forEach(function(el){
+  var obs = new IntersectionObserver(function(entries){
+    if(entries[0].isIntersecting){
+      var target = +el.dataset.target;
+      var start = null;
+      var duration = 1800;
+      function step(ts){
+        if(!start) start=ts;
+        var p = Math.min((ts-start)/duration,1);
+        el.textContent = Math.floor(p*target);
+        if(p<1) requestAnimationFrame(step);
+        else el.textContent=target;
+      }
+      requestAnimationFrame(step);
+      obs.unobserve(el);
+    }
+  },{threshold:0.5});
+  obs.observe(el);
+});
+
+/* ── MENU CATEGORIES ─────────────────────────────────── */
+var catBtns = document.querySelectorAll('.cat-btn');
+var menuCards = document.querySelectorAll('.menu-card[data-cat]');
+
+function filterMenu(cat){
+  menuCards.forEach(function(card){
+    card.classList.toggle('hidden', cat!=='all' && card.dataset.cat!==cat);
+  });
+  catBtns.forEach(function(b){ b.classList.toggle('active', b.dataset.cat===cat); });
+}
+catBtns.forEach(function(btn){
+  btn.addEventListener('click', function(){ filterMenu(btn.dataset.cat); });
+  addRipple(btn);
+});
+
+/* ── MENU SEARCH ─────────────────────────────────────── */
+var searchInput = document.getElementById('menu-search');
+var searchDD = document.getElementById('search-dropdown');
+
+var allItems = Array.from(menuCards).map(function(card){
+  return {
+    name: card.querySelector('.mc-name').textContent,
+    cat: card.querySelector('.mc-cat').textContent,
+    catKey: card.dataset.cat
+  };
+});
+
+searchInput.addEventListener('input', function(){
+  var q = searchInput.value.trim().toLowerCase();
+  if(!q){ searchDD.classList.remove('show'); filterMenu('all'); return; }
+
+  var matches = allItems.filter(function(i){
+    return i.name.toLowerCase().includes(q);
   });
 
-  let menuDone = false;
-  new IntersectionObserver(([e]) => {
-    if (e.isIntersecting && !menuDone) {
-      menuDone = true;
-      document.querySelector('.menu-panel.active').querySelectorAll('.menu-card').forEach((c, i) => {
-        ));
-        }
-      });
-    }
-  }, { threshold: 0.2 }).observe(document.getElementById('menu'));
-
-  /* ── LIGHTBOX ──────────────────────────────────── */
-  function openLightbox(el) {
-    const img = el.querySelector('img');
-    document.getElementById('lightbox-img').src = img.src;
-    document.getElementById('lightbox-img').alt = img.alt;
-    document.getElementById('lightbox').classList.add('open');
-    document.body.style.overflow = 'hidden';
+  if(matches.length){
+    searchDD.innerHTML = matches.slice(0,6).map(function(i){
+      return '<div class="search-result-item" data-cat="'+i.catKey+'">'+
+        '<div class="sri-name">'+i.name+'</div>'+
+        '<div class="sri-cat">'+i.cat+'</div></div>';
+    }).join('');
+  } else {
+    searchDD.innerHTML = '<div class="search-result-item"><div class="sri-name" style="color:rgba(250,248,243,.4)">Sin resultados</div></div>';
   }
-  function closeLightbox() {
-    document.getElementById('lightbox').classList.remove('open');
-    document.body.style.overflow = '';
+  searchDD.classList.add('show');
+
+  menuCards.forEach(function(card){
+    var name = card.querySelector('.mc-name').textContent.toLowerCase();
+    card.classList.toggle('hidden', !name.includes(q));
+  });
+  catBtns.forEach(function(b){ b.classList.toggle('active', b.dataset.cat==='all'); });
+
+  searchDD.querySelectorAll('.search-result-item[data-cat]').forEach(function(item){
+    item.addEventListener('click', function(){
+      searchInput.value=''; searchDD.classList.remove('show');
+      filterMenu(item.dataset.cat);
+    });
+  });
+});
+document.addEventListener('click', function(e){
+  if(!e.target.closest('.menu-search-wrap')) searchDD.classList.remove('show');
+});
+
+/* ── GALLERY FILTERS ─────────────────────────────────── */
+document.querySelectorAll('.filter-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var f = btn.dataset.filter;
+    document.querySelectorAll('.filter-btn').forEach(function(b){ b.classList.toggle('active', b===btn); });
+    document.querySelectorAll('.gallery-item[data-filter]').forEach(function(item){
+      item.classList.toggle('hidden', f!=='all' && item.dataset.filter!==f);
+    });
+  });
+});
+
+/* ── LIGHTBOX ────────────────────────────────────────── */
+var lb = document.getElementById('lightbox');
+var lbImg = document.getElementById('lb-img');
+var lbItems = Array.from(document.querySelectorAll('.gallery-item'));
+var lbIdx = 0;
+
+function openLB(idx){
+  lbIdx=idx;
+  var img = lbItems[idx].querySelector('img');
+  lbImg.src = img ? img.src : '';
+  lbImg.alt = img ? img.alt : '';
+  lb.classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeLB(){ lb.classList.remove('open'); document.body.style.overflow=''; }
+function navLB(dir){
+  lbIdx=(lbIdx+dir+lbItems.length)%lbItems.length;
+  lbImg.style.opacity='0';
+  setTimeout(function(){
+    var img=lbItems[lbIdx].querySelector('img');
+    lbImg.src=img?img.src:''; lbImg.alt=img?img.alt:'';
+    lbImg.style.opacity='1';
+  },150);
+}
+lbImg.style.transition='opacity .15s';
+
+lbItems.forEach(function(item,i){
+  item.addEventListener('click',function(){ openLB(i); });
+  item.addEventListener('keydown',function(e){ if(e.key==='Enter') openLB(i); });
+});
+document.getElementById('lb-close').addEventListener('click',closeLB);
+document.getElementById('lb-prev').addEventListener('click',function(){ navLB(-1); });
+document.getElementById('lb-next').addEventListener('click',function(){ navLB(1); });
+lb.addEventListener('click',function(e){ if(e.target===lb) closeLB(); });
+document.addEventListener('keydown',function(e){
+  if(!lb.classList.contains('open')) return;
+  if(e.key==='Escape') closeLB();
+  if(e.key==='ArrowLeft') navLB(-1);
+  if(e.key==='ArrowRight') navLB(1);
+});
+
+/* ── CONTACT FORM ────────────────────────────────────── */
+function validateEmail(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+function setError(inputId, errId, show){
+  document.getElementById(inputId).classList.toggle('error',show);
+  document.getElementById(errId).classList.toggle('show',show);
+  return !show;
+}
+
+document.getElementById('contact-form').addEventListener('submit', function(e){
+  e.preventDefault();
+  var name = document.getElementById('cf-name').value.trim();
+  var email = document.getElementById('cf-email').value.trim();
+  var ok1 = setError('cf-name','err-name',!name);
+  var ok2 = setError('cf-email','err-email',!validateEmail(email));
+  if(!ok1||!ok2) return;
+
+  var btn = document.getElementById('submit-btn');
+  btn.disabled=true; btn.textContent='Enviando...';
+
+  fetch('https://formspree.io/f/YOUR_FORM_ID',{
+    method:'POST',body:new FormData(e.target),headers:{'Accept':'application/json'}
+  }).then(function(r){
+    if(r.ok){ e.target.reset(); toast('¡Reserva enviada! Te contactamos pronto.','success'); }
+    else toast('Hubo un error. Intentá de nuevo.','error');
+  }).catch(function(){
+    toast('Sin conexión. Contactanos por WhatsApp.','error');
+  }).finally(function(){
+    btn.disabled=false; btn.textContent='Enviar reserva';
+  });
+});
+
+/* ── LEAFLET MAP ─────────────────────────────────────── */
+try{
+  var map = L.map('map',{zoomControl:true,scrollWheelZoom:false}).setView([-34.588,-58.432],13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+    attribution:'&copy; OpenStreetMap contributors &copy; CARTO',maxZoom:19
+  }).addTo(map);
+  var icon = L.divIcon({
+    html:'<div style="width:10px;height:10px;background:#C9A96E;border-radius:50%;border:2px solid #FAF8F3;box-shadow:0 0 0 4px rgba(201,169,110,.3)"></div>',
+    iconSize:[10,10],iconAnchor:[5,5],className:''
+  });
+  L.marker([-34.584,-58.432],{icon}).addTo(map).bindPopup('<b>Gratitude Palermo</b><br>Thames 1702');
+  L.marker([-34.590,-58.510],{icon}).addTo(map).bindPopup('<b>Gratitude Victoria</b><br>San Martín 432');
+}catch(err){ console.warn('Map error',err); }
+
+/* ── NEWSLETTER ──────────────────────────────────────── */
+document.getElementById('nl-form').addEventListener('submit',function(e){
+  e.preventDefault();
+  var email=document.getElementById('nl-email').value.trim();
+  if(!validateEmail(email)){ toast('Ingresá un email válido','error'); return; }
+  e.target.reset();
+  toast('¡Suscripción confirmada! Gracias.','success');
+});
+
+/* ── TOAST ───────────────────────────────────────────── */
+function toast(msg,type){
+  type=type||'info';
+  var tc=document.getElementById('toast-container');
+  var t=document.createElement('div');
+  t.className='toast '+type;
+  t.innerHTML='<div class="toast-dot"></div><span>'+msg+'</span>';
+  tc.appendChild(t);
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ t.classList.add('show'); }); });
+  setTimeout(function(){ t.classList.remove('show'); setTimeout(function(){ t.remove(); },400); },4000);
+}
+
+/* ── RIPPLE ──────────────────────────────────────────── */
+function addRipple(el){
+  el.style.position='relative'; el.style.overflow='hidden';
+  el.addEventListener('click',function(e){
+    var r=document.createElement('span');
+    r.className='ripple-effect';
+    var rect=el.getBoundingClientRect();
+    var size=Math.max(rect.width,rect.height);
+    r.style.width=r.style.height=size+'px';
+    r.style.left=(e.clientX-rect.left-size/2)+'px';
+    r.style.top=(e.clientY-rect.top-size/2)+'px';
+    el.appendChild(r);
+    setTimeout(function(){ r.remove(); },700);
+  });
+}
+document.querySelectorAll('.btn-primary,.btn-outline,.btn-submit,.nl-btn').forEach(addRipple);
+
+/* ── CONFETTI (footer) ───────────────────────────────── */
+var confettiFired=false;
+new IntersectionObserver(function(entries){
+  if(entries[0].isIntersecting && !confettiFired){
+    confettiFired=true; launchConfetti();
   }
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+},{threshold:0.3}).observe(document.getElementById('footer'));
 
-  /* ── CONTACT FORM ──────────────────────────────── */
-  function handleForm(e) {
-    e.preventDefault();
-    var form = e.target;
-    var btn = form.querySelector('.form-submit');
-    btn.textContent = 'Enviando…';
-    btn.disabled = true;
-    fetch('https://formspree.io/f/xlgvryla', {
-      method: 'POST',
-      headers: { 'Accept': 'application/json' },
-      body: new FormData(form)
-    }).then(function(r) {
-      if (r.ok) {
-        form.querySelector('.form-submit').style.display = 'none';
-        document.getElementById('form-ok').style.display = 'block';
-        Array.from(form.querySelectorAll('.form-field')).forEach(function(f) { f.style.display = 'none'; });
-      } else {
-        btn.textContent = 'Error — intentá de nuevo';
-        btn.disabled = false;
-      }
-    }).catch(function() {
-      btn.textContent = 'Error — intentá de nuevo';
-      btn.disabled = false;
-    });
+function launchConfetti(){
+  var colors=['#C9A96E','#C17B5C','#7A8C6E','#FAF8F3'];
+  for(var i=0;i<50;i++){
+    (function(i){
+      setTimeout(function(){
+        var p=document.createElement('div');
+        p.className='confetti-piece';
+        p.style.cssText='left:'+Math.random()*100+'vw;background:'+colors[Math.floor(Math.random()*colors.length)]+
+          ';width:'+(6+Math.random()*6)+'px;height:'+(6+Math.random()*6)+'px;'+
+          'border-radius:'+(Math.random()>.5?'50%':'2px')+';'+
+          'animation-duration:'+(2+Math.random()*2)+'s;animation-delay:'+(Math.random())+'s;';
+        document.body.appendChild(p);
+        setTimeout(function(){ p.remove(); },4000);
+      },i*40);
+    })(i);
   }
+}
 
-  
-  
-    
-    
-  
+/* ── MOBILE BOTTOM NAV ───────────────────────────────── */
+var sections=['hero','nosotros','menu','galeria','contacto'];
+var bnItems=document.querySelectorAll('.bn-item');
+var bnHrefs=['#hero','#nosotros','#menu','#galeria','#contacto'];
+window.addEventListener('scroll',function(){
+  var cur='hero';
+  sections.forEach(function(id){
+    var el=document.getElementById(id);
+    if(el && window.scrollY>=el.offsetTop-150) cur=id;
+  });
+  bnItems.forEach(function(item,i){ item.classList.toggle('active','#'+cur===bnHrefs[i]); });
+},{passive:true});
 
-  /* ── ABOUT CARD SCROLL HIJACK + MOUSE TILT ─── */
-  (function() {
-    var card    = document.getElementById('aboutCard');
-    var shine   = document.getElementById('aboutCardShine');
-    var section = document.getElementById('nosotros');
-    if (!card || !shine || !section) return;
+/* ── WA FAB (touch toggle) ───────────────────────────── */
+var waOptions=document.getElementById('wa-options');
+document.getElementById('wa-main').addEventListener('click',function(){
+  if(window.matchMedia('(hover:none)').matches){
+    waOptions.classList.toggle('open');
+  }
+});
 
-    /* ── Scroll state */
-    var scrollTarget  = 0;
-    var scrollCurrent = 0;
-    var locked        = true;   /* hijack active until 180deg */
-
-    /* ── Mouse state */
-    var mTargetX = 0,  mTargetY = 0;
-    var mCurrX   = 0,  mCurrY   = 0;
-    var isOver   = false;
-
-    /* ── Shine state */
-    var shTargetX = 50, shTargetY = 50;
-    var shCurrX   = 50, shCurrY   = 50;
-
-    /* ── Is section filling the viewport? */
-    function inHijackZone() {
-      var r = section.getBoundingClientRect();
-      return r.top <= 0 && r.bottom >= window.innerHeight;
-    }
-
-    /* ── Wheel hijacking */
-    window.addEventListener('wheel', function(e) {
-      if (!locked || !inHijackZone()) return;
-      e.preventDefault();
-      scrollTarget += e.deltaY / 4;
-      if (scrollTarget < 0) scrollTarget = 0;
-      if (scrollTarget >= 180) locked = false;
-    }, { passive: false });
-
-    /* ── Mouse events */
-    card.addEventListener('mouseenter', function() {
-      isOver = true;
-      shine.style.opacity = '1';
-    });
-
-    card.addEventListener('mousemove', function(e) {
-      var r    = card.getBoundingClientRect();
-      var posX = (e.clientX - r.left) / r.width  * 2 - 1;
-      var posY = (e.clientY - r.top)  / r.height * 2 - 1;
-      mTargetY  = posX * 15;
-      mTargetX  = posY * -15;
-      shTargetX = (posX + 1) / 2 * 100;
-      shTargetY = (posY + 1) / 2 * 100;
-    });
-
-    card.addEventListener('mouseleave', function() {
-      isOver    = false;
-      mTargetX  = 0;
-      mTargetY  = 0;
-      shine.style.opacity = '0';
-    });
-
-    /* ── rAF loop: lerp everything */
-    (function tick() {
-      var L_SCROLL = 0.06;
-      var L_MOUSE  = 0.04;
-
-      scrollCurrent += (scrollTarget  - scrollCurrent) * L_SCROLL;
-      mCurrX        += (mTargetX      - mCurrX)        * L_MOUSE;
-      mCurrY        += (mTargetY      - mCurrY)        * L_MOUSE;
-      shCurrX       += (shTargetX     - shCurrX)       * L_MOUSE;
-      shCurrY       += (shTargetY     - shCurrY)       * L_MOUSE;
-
-      var totalY = scrollCurrent + mCurrY;
-      var totalX = mCurrX;
-
-      card.style.transform =
-        'perspective(1000px) rotateY(' + totalY.toFixed(3) + 'deg) rotateX(' + totalX.toFixed(3) + 'deg)';
-
-      if (isOver) {
-        shine.style.backgroundPosition =
-          shCurrX.toFixed(2) + '% ' + shCurrY.toFixed(2) + '%';
-      }
-
-      requestAnimationFrame(tick);
-    })();
-  })();
-  
-  
+})();
 </script>
 </body>
 </html>
